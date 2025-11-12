@@ -1,16 +1,20 @@
 import json
 import random
 import asyncio
+import os
 from typing import Dict, List, Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-from openai import OpenAI
+# Load environment variables from .env file
+load_dotenv()
 
-# Initialize OpenAI client (Gemini API)
-client = OpenAI()
+# Configure Gemini API
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 app = FastAPI()
 
@@ -36,6 +40,7 @@ class ConnectionManager:
                 "players": [],
                 "scores": {},
                 "current_round": 0,
+                "total_rounds": 3, # Default total rounds
                 "current_artist": None,
                 "phrase_options": None,
                 "selected_phrase": [],
@@ -45,16 +50,25 @@ class ConnectionManager:
                 "host": username
             }
         self.active_connections[game_code].append(websocket)
+        # Store websocket with username for easier lookup
         self.game_states[game_code]["players"].append({"username": username, "websocket": websocket})
         self.game_states[game_code]["scores"][username] = 0
-        await self.broadcast(game_code, {"type": "player_joined", "username": username, "players": [{"username": p["username"]} for p in self.game_states[game_code]["players"]]})
+        await self.broadcast(game_code, {"type": "player_joined", "username": username, "players": [{"username": p["username"]} for p in self.game_states[game_code]["players"]], "host": self.game_states[game_code]["host"]})
 
     def disconnect(self, websocket: WebSocket, game_code: str, username: str):
         if game_code in self.active_connections:
-            self.active_connections[game_code].remove(websocket)
+            self.active_connections[game_code] = [conn for conn in self.active_connections[game_code] if conn != websocket]
             self.game_states[game_code]["players"] = [p for p in self.game_states[game_code]["players"] if p["username"] != username]
-            del self.game_states[game_code]["scores"][username]
-            asyncio.create_task(self.broadcast(game_code, {"type": "player_left", "username": username, "players": [{"username": p["username"]} for p in self.game_states[game_code]["players"]] }))
+            if username in self.game_states[game_code]["scores"]:
+                del self.game_states[game_code]["scores"][username]
+
+            # If the host disconnects, assign a new host
+            if self.game_states[game_code]["host"] == username and self.game_states[game_code]["players"]:
+                self.game_states[game_code]["host"] = self.game_states[game_code]["players"][0]["username"]
+                asyncio.create_task(self.broadcast(game_code, {"type": "new_host", "host": self.game_states[game_code]["host"]}))
+
+
+            asyncio.create_task(self.broadcast(game_code, {"type": "player_left", "username": username, "players": [{"username": p["username"]} for p in self.game_states[game_code]["players"]]}))
             if not self.active_connections[game_code]:
                 del self.active_connections[game_code]
                 del self.game_states[game_code]
@@ -70,25 +84,26 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 async def generate_words_with_gemini():
-    prompt = "Generate three lists of words for a drawing game. Each list should contain 5 words. The categories are: 'Vlastnost' (Adjective), 'Subjekt' (Noun), and 'Činnost' (Verb phrase). Format the output as a JSON object with keys 'Vlastnost', 'Subjekt', 'Činnost'. Example: {'Vlastnost': ['Vzteklý', 'Elegantní'], 'Subjekt': ['Klaun', 'Velryba'], 'Činnost': ['Peče dort', 'Hraje golf']}. Make sure the words are creative and suitable for drawing."
+    prompt = "Vytvoř tři seznamy slov pro kreslící hru. Každý seznam by měl obsahovat 5 slov. Kategorie jsou: 'Vlastnost' (přídavné jméno), 'Subjekt' (podstatné jméno) a 'Činnost' (slovesná fráze). Výstup naformátuj jako JSON objekt s klíči 'Vlastnost', 'Subjekt', 'Činnost'. Příklad: {'Vlastnost': ['Vzteklý', 'Elegantní'], 'Subjekt': ['Klaun', 'Velryba'], 'Činnost': ['Peče dort', 'Hraje golf']}. Slova by měla být kreativní a vhodná ke kreslení."
     try:
-        response = client.chat.completions.create(
-            model="gemini-2.5-flash",
-            messages=[
-                {"role": "user", "content": prompt}
-            ],
-            response_format={ "type": "json_object" }
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        response = await model.generate_content_async(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
         )
-        words = json.loads(response.choices[0].message.content)
+        # Clean the response to ensure it's valid JSON
+        cleaned_response = response.text.strip().replace("```json", "").replace("```", "")
+        words = json.loads(cleaned_response)
         return words
     except Exception as e:
         print(f"Error generating words with Gemini: {e}")
-        # Fallback words
+        # Fallback words in Czech
         return {
             "Vlastnost": ["Vzteklý", "Elegantní", "Líný", "Šťastný", "Smutný"],
             "Subjekt": ["Klaun", "Velryba", "Astronaut", "Robot", "Kočka"],
             "Činnost": ["Peče dort", "Hraje golf", "Tančí", "Spí", "Jí banán"]
         }
+
 
 @app.websocket("/ws/{game_code}/{username}")
 async def websocket_endpoint(websocket: WebSocket, game_code: str, username: str):
@@ -98,61 +113,78 @@ async def websocket_endpoint(websocket: WebSocket, game_code: str, username: str
             data = await websocket.receive_text()
             message = json.loads(data)
 
+            game_state = manager.game_states.get(game_code)
+            if not game_state:
+                break # Game state not found, exit loop
+
             if message["type"] == "start_game":
-                if manager.game_states[game_code]["host"] == username:
-                    manager.game_states[game_code]["current_round"] = 1
+                if game_state["host"] == username:
+                    game_state["total_rounds"] = len(game_state["players"]) * 2 # 2 rounds per player
                     await start_round(game_code)
                 else:
                     await manager.send_personal_message({"type": "error", "message": "Pouze hostitel může spustit hru."}, websocket)
 
             elif message["type"] == "select_phrase":
-                if manager.game_states[game_code]["current_artist"] == username:
-                    manager.game_states[game_code]["selected_phrase"] = message["phrase"]
-                    full_phrase = " ".join(message["phrase"])
-                    masked_phrase = " ".join(["_" * len(word) for word in message["phrase"]])
-                    manager.game_states[game_code]["masked_phrase"] = masked_phrase
+                if game_state["current_artist"] == username:
+                    selected_phrase = message["phrase"]
+                    game_state["selected_phrase"] = selected_phrase
+                    masked_phrase = " ".join(["_" * len(word) for word in selected_phrase])
+                    game_state["masked_phrase"] = masked_phrase
                     await manager.broadcast(game_code, {"type": "phrase_selected", "masked_phrase": masked_phrase})
+                    # Start the timer only after the phrase is selected
+                    asyncio.create_task(round_timer(game_code, 90)) # 90-second timer
                 else:
                     await manager.send_personal_message({"type": "error", "message": "Nejste umělec pro toto kolo."}, websocket)
 
             elif message["type"] == "drawing_data":
-                if manager.game_states[game_code]["current_artist"] == username:
-                    manager.game_states[game_code]["drawing_data"].append(message["data"])
+                if game_state["current_artist"] == username:
+                    # Don't store drawing data on the server to save memory
                     await manager.broadcast(game_code, {"type": "drawing_update", "data": message["data"]})
 
-            elif message["type"] == "guess":
-                if manager.game_states[game_code]["current_artist"] != username:
-                    full_phrase = " ".join(manager.game_states[game_code]["selected_phrase"])
-                    guess = message["guess"].lower()
-                    if guess in [word.lower() for word in manager.game_states[game_code]["selected_phrase"]]:
-                        # Reveal the guessed word
-                        revealed_phrase_list = manager.game_states[game_code]["masked_phrase"].split()
-                        original_phrase_list = manager.game_states[game_code]["selected_phrase"]
-                        for i, word in enumerate(original_phrase_list):
-                            if word.lower() == guess:
-                                revealed_phrase_list[i] = word
-                        manager.game_states[game_code]["masked_phrase"] = " ".join(revealed_phrase_list)
+            elif message["type"] == "clear_canvas":
+                 if game_state["current_artist"] == username:
+                    await manager.broadcast(game_code, {"type": "canvas_cleared"})
 
-                        # Update scores (simple scoring for now)
-                        manager.game_states[game_code]["scores"][username] += 10
-                        manager.game_states[game_code]["scores"][manager.game_states[game_code]["current_artist"]] += 5
+
+            elif message["type"] == "guess":
+                if game_state["current_artist"] != username:
+                    selected_phrase = game_state["selected_phrase"]
+                    guess = message["guess"].strip().lower()
+                    correct_guess = False
+
+                    # Check if the guess matches any word in the phrase
+                    revealed_phrase_list = game_state["masked_phrase"].split()
+                    for i, word in enumerate(selected_phrase):
+                        if word.lower() == guess and revealed_phrase_list[i] == "_" * len(word):
+                            revealed_phrase_list[i] = word
+                            correct_guess = True
+                            break # Guess only one word at a time
+
+                    if correct_guess:
+                        game_state["masked_phrase"] = " ".join(revealed_phrase_list)
+
+                        # Update scores
+                        game_state["scores"][username] += 10
+                        if game_state["current_artist"] in game_state["scores"]:
+                             game_state["scores"][game_state["current_artist"]] += 5
+
 
                         await manager.broadcast(game_code, {
                             "type": "word_guessed",
                             "guesser": username,
                             "word": guess,
-                            "revealed_phrase": manager.game_states[game_code]["masked_phrase"],
-                            "scores": manager.game_states[game_code]["scores"]
+                            "revealed_phrase": game_state["masked_phrase"],
+                            "scores": game_state["scores"]
                         })
-                        if "_" not in manager.game_states[game_code]["masked_phrase"]:
-                            await end_round(game_code, full_phrase)
+                        # Check if all words are guessed
+                        if "_" not in game_state["masked_phrase"]:
+                            game_state["round_timer"].cancel() # Cancel the timer
+                            await end_round(game_code)
                     else:
                         await manager.broadcast(game_code, {"type": "chat_message", "username": username, "message": message["guess"]})
                 else:
                     await manager.send_personal_message({"type": "error", "message": "Umělec nemůže hádat."}, websocket)
 
-            elif message["type"] == "chat_message":
-                await manager.broadcast(game_code, {"type": "chat_message", "username": username, "message": message["message"]})
 
     except WebSocketDisconnect:
         manager.disconnect(websocket, game_code, username)
@@ -160,52 +192,76 @@ async def websocket_endpoint(websocket: WebSocket, game_code: str, username: str
         print(f"WebSocket error: {e}")
         manager.disconnect(websocket, game_code, username)
 
+async def round_timer(game_code: str, duration: int):
+    try:
+        await asyncio.sleep(duration)
+        if game_code in manager.game_states:
+            await end_round(game_code)
+    except asyncio.CancelledError:
+        pass # Timer was cancelled, which is expected when round ends early
+
 async def start_round(game_code: str):
-    game_state = manager.game_states[game_code]
+    game_state = manager.game_states.get(game_code)
+    if not game_state: return
+
     game_state["current_round"] += 1
-    if game_state["current_round"] > 3: # Max 3 rounds for now
+    if game_state["current_round"] > game_state["total_rounds"]:
         await end_game(game_code)
         return
 
-    # Select next artist
-    player_usernames = [p["username"] for p in game_state["players"]]
-    current_artist_index = (game_state["current_round"] - 1) % len(player_usernames)
-    game_state["current_artist"] = player_usernames[current_artist_index]
-    game_state["drawing_data"] = []
+    # Reset round-specific data
     game_state["selected_phrase"] = []
     game_state["masked_phrase"] = ""
+    game_state["drawing_data"] = []
 
-    await manager.broadcast(game_code, {"type": "round_start", "round": game_state["current_round"], "artist": game_state["current_artist"]})
+    # Select next artist (round-robin)
+    player_usernames = [p["username"] for p in game_state["players"]]
+    if not player_usernames: return # End if no players left
+    artist_index = (game_state["current_round"] - 1) % len(player_usernames)
+    game_state["current_artist"] = player_usernames[artist_index]
 
-    # Generate words for the artist
+
+    await manager.broadcast(game_code, {"type": "round_start", "round": game_state["current_round"], "total_rounds": game_state["total_rounds"], "artist": game_state["current_artist"]})
+
+    # Generate words and send to the artist
     words = await generate_words_with_gemini()
-    for player_ws in game_state["players"]:
-        if player_ws["username"] == game_state["current_artist"]:
-            await manager.send_personal_message({"type": "select_phrase_options", "words": words}, player_ws["websocket"])
-            break
+    artist_ws = next((p["websocket"] for p in game_state["players"] if p["username"] == game_state["current_artist"]), None)
+    if artist_ws:
+        await manager.send_personal_message({"type": "select_phrase_options", "words": words}, artist_ws)
+    else:
+        # If artist is not found, end round and start a new one
+        await end_round(game_code)
 
-    # Start timer for the round
-    await asyncio.sleep(90) # Drawing time
-    if game_state["masked_phrase"] != "": # If phrase was selected
-        await end_round(game_code, " ".join(game_state["selected_phrase"])) # End round if time runs out
 
-async def end_round(game_code: str, full_phrase: str):
-    game_state = manager.game_states[game_code]
+async def end_round(game_code: str):
+    game_state = manager.game_states.get(game_code)
+    if not game_state: return
+
+    full_phrase = " ".join(game_state["selected_phrase"])
     await manager.broadcast(game_code, {"type": "round_end", "full_phrase": full_phrase, "scores": game_state["scores"]})
-    await asyncio.sleep(5) # Pause before next round
+
+    # Cancel the round timer if it's still running
+    if "round_timer" in game_state and game_state["round_timer"]:
+        game_state["round_timer"].cancel()
+
+    await asyncio.sleep(5)  # Pause before next round
     await start_round(game_code)
 
 async def end_game(game_code: str):
-    game_state = manager.game_states[game_code]
+    game_state = manager.game_states.get(game_code)
+    if not game_state: return
+
     await manager.broadcast(game_code, {"type": "game_end", "final_scores": game_state["scores"]})
-    # Clean up game state
+    # Clean up game state after a delay to ensure message is sent
+    await asyncio.sleep(2)
+
     if game_code in manager.active_connections:
-        for connection in manager.active_connections[game_code]:
-            await connection.close()
+        # Close connections gracefully
+        for conn in manager.active_connections[game_code]:
+            await conn.close(code=1000)
         del manager.active_connections[game_code]
         del manager.game_states[game_code]
 
 @app.get("/")
 async def get_root():
-    return {"message": "Welcome to Koncept Kreslíři Backend!"}
-
+    return {"message": "Vítejte v backendu Koncept Kreslíři!"}

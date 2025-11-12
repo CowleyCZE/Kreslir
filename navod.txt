@@ -1,0 +1,67 @@
+# Návod ke spuštění hry Koncept Kreslíři
+
+Tento návod vás provede kroky potřebnými k instalaci a spuštění hry na vašem lokálním počítači.
+
+## Požadavky
+
+- Node.js a npm (nebo ekvivalentní správce balíčků)
+- Python 3.7+ a pip
+- API klíč pro Google Gemini
+
+## 1. Klonování repozitáře
+
+Pokud jste tak ještě neučinili, naklonujte si repozitář na svůj počítač.
+
+## 2. Nastavení backendu
+
+1.  **Přejděte do adresáře `backend`:**
+    ```bash
+    cd backend
+    ```
+
+2.  **Vytvořte virtuální prostředí (doporučeno):**
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # Pro Windows: venv\Scripts\activate
+    ```
+
+3.  **Nainstalujte požadované knihovny:**
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  **Nastavte API klíč:**
+    - Přejmenujte soubor `.env.example` na `.env`.
+    - Otevřete soubor `.env` a vložte svůj Google Gemini API klíč místo `"VAŠ_API_KLÍČ_ZDE"`.
+
+5.  **Spusťte backend server:**
+    ```bash
+    uvicorn main:app --reload
+    ```
+    Server by měl běžet na adrese `http://localhost:8000`.
+
+## 3. Nastavení frontendu
+
+1.  **Přejděte do adresáře `koncept-kresliri`:**
+    ```bash
+    cd koncept-kresliri
+    ```
+
+2.  **Nainstalujte závislosti:**
+    ```bash
+    npm install
+    ```
+
+3.  **Spusťte frontend aplikaci:**
+    ```bash
+    npm run dev
+    ```
+    Aplikace by se měla otevřít v prohlížeči na adrese `http://localhost:5173` (nebo na jiném portu, pokud je 5173 obsazený).
+
+## 4. Hraní hry
+
+1.  Otevřete v prohlížeči adresu, na které běží frontend.
+2.  Zadejte své jméno a vytvořte novou hru nebo se připojte k existující pomocí kódu hry.
+3.  Sdílejte kód hry s přáteli, aby se mohli připojit.
+4.  Jakmile jsou v místnosti alespoň dva hráči, hostitel může spustit hru.
+5.  Užijte si hru!
