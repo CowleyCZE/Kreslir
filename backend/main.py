@@ -1,6 +1,7 @@
 import json
 import random
 import asyncio
+import os
 from typing import Dict, List, Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -214,6 +215,18 @@ async def round_timer(game_code: str, duration: int):
             await end_round(game_code)
     except asyncio.CancelledError:
         pass
+
+async def round_timer(game_code: str, duration: int):
+    try:
+        await asyncio.sleep(duration)
+        if game_code in manager.game_states:
+            await end_round(game_code)
+    except asyncio.CancelledError:
+
+        pass
+
+        pass # Timer was cancelled, which is expected when round ends early
+
 
 async def start_round(game_code: str):
     game_state = manager.game_states.get(game_code)
