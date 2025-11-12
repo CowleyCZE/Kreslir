@@ -6,7 +6,6 @@ Tento návod vás provede kroky potřebnými k instalaci a spuštění hry na va
 
 - Node.js a npm (nebo ekvivalentní správce balíčků)
 - Python 3.7+ a pip
-- API klíč pro Google Gemini
 
 ## 1. Klonování repozitáře
 
@@ -30,11 +29,7 @@ Pokud jste tak ještě neučinili, naklonujte si repozitář na svůj počítač
     pip install -r requirements.txt
     ```
 
-4.  **Nastavte API klíč:**
-    - Přejmenujte soubor `.env.example` na `.env`.
-    - Otevřete soubor `.env` a vložte svůj Google Gemini API klíč místo `"VAŠ_API_KLÍČ_ZDE"`.
-
-5.  **Spusťte backend server:**
+4.  **Spusťte backend server:**
     ```bash
     uvicorn main:app --reload
     ```
@@ -63,5 +58,6 @@ Pokud jste tak ještě neučinili, naklonujte si repozitář na svůj počítač
 1.  Otevřete v prohlížeči adresu, na které běží frontend.
 2.  Zadejte své jméno a vytvořte novou hru nebo se připojte k existující pomocí kódu hry.
 3.  Sdílejte kód hry s přáteli, aby se mohli připojit.
-4.  Jakmile jsou v místnosti alespoň dva hráči, hostitel může spustit hru.
-5.  Užijte si hru!
+4.  Hostitel vybere balíček slov.
+5.  Jakmile jsou v místnosti alespoň dva hráči, hostitel může spustit hru.
+6.  Užijte si hru!
