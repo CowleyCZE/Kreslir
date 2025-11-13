@@ -1,0 +1,22 @@
+{
+  "Klasika": {
+    "Vlastnost": ["Veselý", "Smutný", "Rychlý", "Líný", "Velký", "Malý", "Horký", "Studený", "Hlasitý", "Tichý"],
+    "Subjekt": ["Dům", "Auto", "Počítač", "Kniha", "Stůl", "Židle", "Pes", "Kočka", "Lékař", "Učitel"],
+    "Činnost": ["čte noviny", "vaří večeři", "hraje na kytaru", "tančí salsu", "opravuje kolo", "maluje obraz", "zpívá v dešti", "jede na koni", "staví sněhuláka", "píše dopis"]
+  },
+  "Fantasy a Sci-Fi": {
+    "Vlastnost": ["Kouzelný", "Mocný", "Neviditelný", "Prastarý", "Kybernetický", "Mezigalaktický", "Světelný", "Temný", "Legendární", "Budoucí"],
+    "Subjekt": ["Drak", "Čaroděj", "Elf", "Robot", "Mimozemšťan", "Jednorožec", "Vesmírná loď", "Časostroj", "Zombie", "Trpaslík"],
+    "Činnost": ["bojuje s monstrem", "hledá poklad", "sesílá kouzlo", "cestuje časem", "pilotuje raketu", "zachraňuje princeznu", "vládne království", "kutá v dolech", "prozkoumává planetu", "utíká před laserem"]
+  },
+  "Zvířata a Příroda": {
+    "Vlastnost": ["Divoký", "Chlupatý", "Barevný", "Jedovatý", "Ohrožený", "Vodní", "Létající", "Noční", "Obří", "Drobný"],
+    "Subjekt": ["Lev", "Slon", "Papoušek", "Had", "Panda", "Velryba", "Motýl", "Sopka", "Řeka", "Les"],
+    "Činnost": ["loví kořist", "staví si hnízdo", "přeplavává oceán", "šplhá na strom", "opyluje květiny", "zpívá za úsvitu", "leží na slunci", "chrání si teritorium", "migruje na jih", "maskuje se v listí"]
+  },
+  "Jídlo a Pití": {
+    "Vlastnost": ["Sladký", "Kyselý", "Pálivý", "Hořký", "Slaný", "Čerstvý", "Pečený", "Smažený", "Studený", "Horký"],
+    "Subjekt": ["Pizza", "Dort", "Káva", "Hamburger", "Sushi", "Zmrzlina", "Salát", "Pivo", "Těstoviny", "Ovoce"],
+    "Činnost": ["krájí cibuli", "peče chleba", "míchá koktejl", "griluje maso", "ochutnává víno", "zdobí dort", "vaří polévku", "servíruje snídani", "jí hůlkami", "pije brčkem"]
+  }
+}
