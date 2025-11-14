@@ -12,3 +12,9 @@
 "frontend/node_modules/.vite/" 
 "frontend/node_modules/" 
 "frontend/node_modules/.vite/" 
+/frontend/node_modules
+/frontend/package-lock.json
+/.vscode
+/.vs
+/backend/__pycache__
+/backend/package-lock.json
