@@ -65,7 +65,12 @@ const Game: React.FC<GameProps> = ({ socket, username, gameCode }) => {
   // Mobile UI states
   const [mobileShowChat, setMobileShowChat] = useState(false);
   const [mobileShowScores, setMobileShowScores] = useState(false);
+  const [mobileShowToolbar, setMobileShowToolbar] = useState(false);
+  const [mobileShowLobby, setMobileShowLobby] = useState(false);
   const [canvasFullscreen, setCanvasFullscreen] = useState(false);
+
+  // toolbar height constant (used to reserve space in drawers)
+  const MOBILE_TOOLBAR_HEIGHT = 84; // px
 
   // --- WebSocket Message Handlers ---
   const handlePlayerUpdate = useCallback((message: any) => {
@@ -247,6 +252,7 @@ const Game: React.FC<GameProps> = ({ socket, username, gameCode }) => {
 
   const handleSelectPackage = useCallback((pkg: string) => {
     sendMessage({ type: 'select_package', package: pkg });
+    setSelectedPackage(pkg);
   }, [sendMessage]);
 
   const handleClearCanvas = useCallback(() => {
@@ -291,16 +297,40 @@ const Game: React.FC<GameProps> = ({ socket, username, gameCode }) => {
           </div>
 
           {/* Mobile control buttons */}
-          <div className="absolute bottom-4 left-4 flex gap-2 md:hidden z-50">
-            <button onClick={() => setMobileShowChat(true)} className="bg-blue-600 text-white px-3 py-2 rounded-md shadow">Chat</button>
-            <button onClick={() => setMobileShowScores(true)} className="bg-green-600 text-white px-3 py-2 rounded-md shadow">Skóre</button>
-            <button onClick={() => setCanvasFullscreen(true)} className="bg-gray-800 text-white px-3 py-2 rounded-md shadow">Plátno</button>
+          <div className="absolute bottom-4 left-4 flex gap-2 md:hidden z-60">
+            <button onClick={() => { setMobileShowChat(true); setMobileShowScores(false); setMobileShowLobby(false); }} className="bg-blue-600 text-white px-3 py-2 rounded-md shadow">Chat</button>
+            <button onClick={() => { setMobileShowScores(true); setMobileShowChat(false); setMobileShowLobby(false); }} className="bg-green-600 text-white px-3 py-2 rounded-md shadow">Skóre</button>
+            {username === gameState.current_artist && (
+              <button onClick={() => { setMobileShowToolbar((s) => !s); setMobileShowChat(false); setMobileShowScores(false); setMobileShowLobby(false); }} className="bg-yellow-600 text-white px-3 py-2 rounded-md shadow">Nástroje</button>
+            )}
+            {!gameState.game_started && username === gameState.host && (
+              <button onClick={() => { setMobileShowLobby(true); setMobileShowChat(false); setMobileShowScores(false); }} className="bg-indigo-600 text-white px-3 py-2 rounded-md shadow">Lobby</button>
+            )}
+            <button onClick={() => { setCanvasFullscreen(true); setMobileShowChat(false); setMobileShowScores(false); setMobileShowToolbar(false); setMobileShowLobby(false); }} className="bg-gray-800 text-white px-3 py-2 rounded-md shadow">Plátno</button>
           </div>
 
           <div className="absolute top-2 right-2 bg-gray-800/50 p-2 rounded-lg text-white hidden md:block">Menu</div>
         </div>
+
+        {/* Mobile floating toolbar (visible for artist) */}
+        {username === gameState.current_artist && mobileShowToolbar && (
+          <div className="fixed left-0 right-0 bottom-0 z-70 md:hidden">
+            <div className="mx-4 mb-4 bg-gray-800 p-3 rounded-xl shadow-xl flex justify-between items-center" style={{ height: MOBILE_TOOLBAR_HEIGHT }}>
+              <Toolbar
+                onClearCanvas={() => { handleClearCanvas(); setMobileShowToolbar(false); }}
+                onColorChange={handleColorChange}
+                onBrushSizeChange={handleBrushSizeChange}
+                activeColor={color}
+                brushSize={brushSize}
+              />
+              <button onClick={() => setMobileShowToolbar(false)} className="ml-2 text-white bg-gray-700 px-3 py-2 rounded-md">Zavřít</button>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop toolbar under canvas */}
         {username === gameState.current_artist && (
-          <div className="flex-shrink-0 bg-gray-600 p-3 rounded-xl shadow-md">
+          <div className="hidden md:block flex-shrink-0 bg-gray-600 p-3 rounded-xl shadow-md">
             <Toolbar
               onClearCanvas={handleClearCanvas}
               onColorChange={handleColorChange}
@@ -375,10 +405,15 @@ const Game: React.FC<GameProps> = ({ socket, username, gameCode }) => {
       {/* Mobile overlays/drawers */}
       {mobileShowChat && (
         <div className="fixed inset-0 z-60 flex items-end md:hidden">
-          <div className="w-full bg-gray-800 rounded-t-xl p-3 shadow-xl max-h-[70vh] overflow-auto">
+          <div className="w-full bg-gray-800 rounded-t-xl p-3 shadow-xl max-h-[70vh] overflow-auto" style={{ paddingBottom: mobileShowToolbar ? MOBILE_TOOLBAR_HEIGHT + 24 : 16 }}>
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-bold">Chat</h3>
-              <button onClick={() => setMobileShowChat(false)} className="text-gray-300">Zavřít</button>
+              <div className="flex gap-2">
+                <button onClick={() => setMobileShowChat(false)} className="text-gray-300">Zavřít</button>
+                {username === gameState.current_artist && (
+                  <button onClick={() => { setMobileShowToolbar(true); }} className="text-yellow-200">Nástroje</button>
+                )}
+              </div>
             </div>
             <ChatBox
               messages={chatMessages}
@@ -391,16 +426,39 @@ const Game: React.FC<GameProps> = ({ socket, username, gameCode }) => {
 
       {mobileShowScores && (
         <div className="fixed inset-0 z-60 flex items-start justify-end md:hidden">
-          <div className="w-full bg-gray-800 p-3 shadow-xl max-h-[80vh] overflow-auto">
+          <div className="w-full bg-gray-800 p-3 shadow-xl max-h-[80vh] overflow-auto" style={{ paddingBottom: mobileShowToolbar ? MOBILE_TOOLBAR_HEIGHT + 24 : 16 }}>
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-bold">Skóre</h3>
-              <button onClick={() => setMobileShowScores(false)} className="text-gray-300">Zavřít</button>
+              <div className="flex gap-2">
+                <button onClick={() => setMobileShowScores(false)} className="text-gray-300">Zavřít</button>
+                <button onClick={() => setMobileShowChat(true)} className="text-gray-300">Chat</button>
+              </div>
             </div>
             <Scoreboard
               players={gameState.players}
               scores={gameState.scores}
               currentArtist={gameState.current_artist}
               guessedPlayers={guessedPlayers}
+            />
+          </div>
+        </div>
+      )}
+
+      {mobileShowLobby && (
+        <div className="fixed inset-0 z-60 flex items-end md:hidden">
+          <div className="w-full bg-gray-800 rounded-t-xl p-3 shadow-xl max-h-[80vh] overflow-auto" style={{ paddingBottom: MOBILE_TOOLBAR_HEIGHT + 24 }}>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-bold">Lobby</h3>
+              <button onClick={() => setMobileShowLobby(false)} className="text-gray-300">Zavřít</button>
+            </div>
+            <GameLobby
+              gameCode={gameCode}
+              isHost={username === gameState.host}
+              playerCount={gameState.players.length}
+              availablePackages={availablePackages}
+              selectedPackage={selectedPackage || gameState.selected_package}
+              onSelectPackage={(p) => { handleSelectPackage(p); }}
+              onStartGame={() => { handleStartGame(); setMobileShowLobby(false); }}
             />
           </div>
         </div>

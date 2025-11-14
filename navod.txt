@@ -103,6 +103,44 @@ Použití (Bash):
 
 Skript spustí backend (uvicorn) a frontend (Vite) a ponechá je běžet. Skripty také registrují přerušení (SIGINT) a při přerušení zastaví obě služby.
 
+### 3b1. Obsah skriptu `scripts\start-dev.ps1` (Windows PowerShell)
+
+```powershell
+# start-dev.ps1 - spustí backend a frontend pro lokální vývoj (PowerShell)
+Param()
+$scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
+Set-Location $scriptRoot\..
+
+Write-Host "Spouštím backend..."
+Set-Location .\backend
+if (Test-Path .\venv\Scripts\Activate.ps1) {
+    Write-Host "Aktivuji virtuální prostředí"
+    . .\venv\Scripts\Activate.ps1
+}
+$backend = Start-Process -FilePath "uvicorn" -ArgumentList "main:app --host 0.0.0.0 --port 8000 --reload" -PassThru
+
+Set-Location ..\frontend
+Write-Host "Spouštím frontend..."
+if (-Not (Test-Path .\node_modules)) {
+    npm install
+}
+
+# místo Start-Process -FilePath "npm" použijeme cmd.exe /c npm ...
+$npm = Start-Process -FilePath "cmd.exe" -ArgumentList "/c npm run dev -- --host" -WorkingDirectory (Get-Location) -PassThru
+
+Set-Location $scriptRoot\..
+
+Write-Host "Backend PID: $($backend.Id), Frontend PID: $($npm.Id)"
+
+try {
+    while ($true) { Start-Sleep -Seconds 1 }
+} finally {
+    Write-Host "Zastavuji procesy..."
+    if ($backend -ne $null) { $backend.Kill() }
+    if ($npm -ne $null) { $npm.Kill() }
+}
+```
+
 ## 4. Jak se připojí hráči (PC + mobil)
 
 1.  Na hostitelském počítači spusťte backend a frontend podle výše uvedených kroků (ručně nebo pomocí skriptu).

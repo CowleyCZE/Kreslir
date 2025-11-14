@@ -1,18 +1,36 @@
 #!/usr/bin/env bash
-# start-dev.sh - spustí backend a frontend pro lokální vývoj
-
 set -euo pipefail
-ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
-cd "$ROOT_DIR"
 
-# Spustíme backend v subshellu
+ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
+cd "$ROOT_DIR" || exit 1
+
+cleanup() {
+  echo "Zastavuji služby..."
+  kill "${BACKEND_PID:-}" "${FRONTEND_PID:-}" 2>/dev/null || true
+  wait "${BACKEND_PID:-}" 2>/dev/null || true
+  wait "${FRONTEND_PID:-}" 2>/dev/null || true
+}
+
+trap 'cleanup; exit 0' SIGINT SIGTERM
+
+# Backend
 echo "Spouštím backend..."
 cd backend
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
+if [ -f "venv/bin/activate" ]; then
+  echo "Aktivuji virtuální prostøedí"
+  # shellcheck source=/dev/null
+  . venv/bin/activate
+fi
+
+if command -v uvicorn >/dev/null 2>&1; then
+  uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
+else
+  python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
+fi
 BACKEND_PID=$!
 cd "$ROOT_DIR"
 
-# Spustíme frontend
+# Frontend
 echo "Spouštím frontend..."
 cd frontend
 if [ ! -d "node_modules" ]; then
