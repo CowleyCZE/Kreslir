@@ -1,4 +1,8 @@
 "node_modules/" 
+"**/node_modules/" 
 "__pycache__/" 
 ".vs/" 
 ".vscode/" 
+"backend/__pycache__/" 
+"backend/package-lock.json" 
+"koncept-k-kresliri/package-lock.json" 
