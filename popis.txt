@@ -1,0 +1,79 @@
+Zábavná a kreativní hra na kreslení a hádání v reálném čase, kde hráči kombinují slova, aby vytvořili vtipná zadání, nakreslili je a ostatní hádali, o jakou frázi se jedná.
+🎮 Jak hrát
+Koncept Kreslíři je multiplayerová párty hra, která prověří vaše kreslířské dovednosti a vaši schopnost uhodnout, co se vaši přátelé snaží ztvárnit.
+Spuštění hry
+Zadejte své jméno: Zvolte si přezdívku pro hru.
+Vytvořit hru: Jako hostitel můžete vytvořit novou herní místnost. Obdržíte unikátní ID hry, které můžete sdílet s přáteli.
+Připojit se ke hře: Zadejte ID hry poskytnuté hostitelem a připojte se do existující herní místnosti.
+Herní místnost (Lobby)
+Jakmile jste v lobby, uvidíte všechny připojené hráče.
+Hostitel může spustit hru, jakmile jsou v místnosti alespoň dva hráči.
+Výběr slov
+Na začátku každého kola je jeden hráč vybrán jako Umělec.
+Umělci jsou předloženy tři kategorie slov: Vlastnost, Subjekt a Činnost.
+Umělec musí z každé kategorie vybrat jedno slovo, aby vytvořil jedinečnou, často komickou frázi (např. "Vzteklá velryba hrající golf").
+Ostatní hráči uvidí pouze to, že umělec vybírá slova, ale ne slova samotná.
+Kreslení a hádání
+Jakmile je fráze vybrána, začíná fáze kreslení!
+Umělec vidí celou frázi a musí ji nakreslit na plátno. Spustí se odpočet času.
+Ostatní hráči (hádající) vidí prázdné plátno a frázi s podtržítky místo slov (např. _______   _______   ___________).
+Jak umělec kreslí, obrázek se v reálném čase zobrazuje všem hádajícím.
+Hádající píší své tipy do chatovacího okna.
+Bodování
+Když hádající správně napíše jedno ze slov z fráze, toto slovo se odhalí všem a hádající získá body.
+Čím rychleji hádáte, tím více bodů získáte!
+Umělec také získává body za každé slovo, které ostatní správně uhodnou.
+Kolo končí, když vyprší časový limit, nebo když jsou všechna slova z fráze uhodnuta.
+Vítězství ve hře
+Hra pokračuje po stanovený počet kol, aby se každý dostal na řadu jako umělec.
+Na konci posledního kola je hráč s nejvyšším skóre korunován vítězem!
+✨ Funkce
+Multiplayer v reálném čase: Hrajte plynule s přáteli pomocí WebSocketů pro okamžité aktualizace kreslení a tipů.
+Dynamický obsah: Hra je poháněna Google Gemini API, které generuje čerstvé a nepředvídatelné sady slov pro každou hru, což zajišťuje, že žádná dvě kola nebudou stejná.
+Interaktivní kreslicí plátno: Kompletní sada nástrojů pro kreslení včetně více barev, velikostí štětce, gumy a tlačítka pro smazání plátna.
+Živý přehled tipů: Sledujte, jak přicházejí tipy, a okamžitě uvidíte správné odpovědi.
+Animovaná tabulka skóre: Sledujte, kdo je ve vedení, díky živě aktualizované tabulce skóre.
+Responzivní design: Hrajte na jakémkoli zařízení, od stolního počítače po tablet nebo telefon.
+🛠️ Použité technologie
+Frontend: React, TypeScript
+Stylování: Tailwind CSS
+Komunikace v reálném čase: WebSocketsZábavná a kreativní hra na kreslení a hádání v reálném čase, kde hráči kombinují slova, aby vytvořili vtipná zadání, nakreslili je a ostatní hádali, o jakou frázi se jedná.
+🎮 Jak hrát
+Koncept Kreslíři je multiplayerová párty hra, která prověří vaše kreslířské dovednosti a vaši schopnost uhodnout, co se vaši přátelé snaží ztvárnit.
+Spuštění hry
+Zadejte své jméno: Zvolte si přezdívku pro hru.
+Vytvořit hru: Jako hostitel můžete vytvořit novou herní místnost. Obdržíte unikátní ID hry, které můžete sdílet s přáteli.
+Připojit se ke hře: Zadejte ID hry poskytnuté hostitelem a připojte se do existující herní místnosti.
+Herní místnost (Lobby)
+Jakmile jste v lobby, uvidíte všechny připojené hráče.
+Hostitel může spustit hru, jakmile jsou v místnosti alespoň dva hráči.
+Výběr slov
+Na začátku každého kola je jeden hráč vybrán jako Umělec.
+Umělci jsou předloženy tři kategorie slov: Vlastnost, Subjekt a Činnost.
+Umělec musí z každé kategorie vybrat jedno slovo, aby vytvořil jedinečnou, často komickou frázi (např. "Vzteklá velryba hrající golf").
+Ostatní hráči uvidí pouze to, že umělec vybírá slova, ale ne slova samotná.
+Kreslení a hádání
+Jakmile je fráze vybrána, začíná fáze kreslení!
+Umělec vidí celou frázi a musí ji nakreslit na plátno. Spustí se odpočet času.
+Ostatní hráči (hádající) vidí prázdné plátno a frázi s podtržítky místo slov (např. _______   _______   ___________).
+Jak umělec kreslí, obrázek se v reálném čase zobrazuje všem hádajícím.
+Hádající píší své tipy do chatovacího okna.
+Bodování
+Když hádající správně napíše jedno ze slov z fráze, toto slovo se odhalí všem a hádající získá body.
+Čím rychleji hádáte, tím více bodů získáte!
+Umělec také získává body za každé slovo, které ostatní správně uhodnou.
+Kolo končí, když vyprší časový limit, nebo když jsou všechna slova z fráze uhodnuta.
+Vítězství ve hře
+Hra pokračuje po stanovený počet kol, aby se každý dostal na řadu jako umělec.
+Na konci posledního kola je hráč s nejvyšším skóre korunován vítězem!
+✨ Funkce
+Multiplayer v reálném čase: Hrajte plynule s přáteli pomocí WebSocketů pro okamžité aktualizace kreslení a tipů.
+Dynamický obsah: Na začátku hry si hráči zvolí balíček slov, balíčky jsou rozděleny podle tématu slov. Hra pak načítá slova s tohoto rozsáhlého balíčku, tak vznikají nové a nepředvídatelné sady slov pro každou hru, což zajišťuje, že žádná dvě kola nebudou stejná.
+Interaktivní kreslicí plátno: Kompletní sada nástrojů pro kreslení včetně více barev, velikostí štětce, gumy a tlačítka pro smazání plátna.
+Živý přehled tipů: Sledujte, jak přicházejí tipy, a okamžitě uvidíte správné odpovědi.
+Animovaná tabulka skóre: Sledujte, kdo je ve vedení, díky živě aktualizované tabulce skóre.
+Responzivní design: Hrajte na jakémkoli zařízení, od stolního počítače po tablet nebo telefon.
+🛠️ Použité technologie
+Frontend: React, TypeScript
+Stylování: Tailwind CSS
+Komunikace v reálném čase: WebSockets
