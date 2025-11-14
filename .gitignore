@@ -5,4 +5,6 @@
 ".vscode/" 
 "backend/__pycache__/" 
 "backend/package-lock.json" 
+"koncept-k-kresliri/package-lock.json" 
 "frontend/node_modules/" 
+"frontend/package-lock.json" 
