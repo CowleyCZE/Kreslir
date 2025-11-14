@@ -3,10 +3,15 @@ import random
 import asyncio
 import time
 import unicodedata
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional, Tuple
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+import sqlite3
+from pathlib import Path
+from datetime import datetime
+from collections import defaultdict
 
 app = FastAPI()
 
@@ -25,9 +30,99 @@ except FileNotFoundError:
     print("Error: word_packages.json not found! Using fallback words.")
     WORD_PACKAGES = {
         "Klasika": {
-            "Vlastnost": ["Vzteklý", "Elegantní", "Líný", "Šťastný", "Smutný"],
-            "Subjekt": ["Klaun", "Velryba", "Astronaut", "Robot", "Kočka"],
-            "Činnost": ["peče dort", "hraje golf", "tančí", "spí", "jí banán"]
+            "Vlastnost": [
+                "Vzteklý", "Elegantní", "Líný", "Šťastný", "Smutný", "Zoufale veselý",
+                "Rychlý", "Pomalý", "Zvědavý", "Zamračený", "Rozmarný", "Statečný",
+                "Plachý", "Neohrožený", "Zamotaný", "Hrdinský", "Nešikovný", "Šikovný",
+                "Tajemný", "Rozjařený", "Nesmělý", "Zvukotěsný", "Nadšený", "Apatií zmítaný"
+            ],
+            "Subjekt": [
+                "Klaun", "Velryba", "Astronaut", "Robot", "Kočka", "Pes", "Žirafa",
+                "Slon", "Drak", "Princezna", "Rytíř", "Kuchař", "Malíř", "Srdce", "Strom",
+                "Auto", "Vlak", "Motocykl", "Hrad", "Dinosaurus", "Kaktus", "Lednička",
+                "Kosmonaut", "Noviny"
+            ],
+            "Činnost": [
+                "peče dort", "hraje golf", "tančí", "spí", "jí banán", "skáče přes vířivku",
+                "houpá se na laně", "maluje obraz", "hází frisbee", "zpívá serenádu",
+                "šíří konfety", "překonává překážky", "jí zmrzlinu", "řídí kůň", "učí se plavat",
+                "kouzlí s kartami", "fotografuje západ slunce", "pěstuje květiny",
+                "hledá poklad", "čte knihu", "stříhá trávu", "louská ořechy", "sledování filmů"
+            ]
+        },
+        "Zvířata": {
+            "Vlastnost": [
+                "Hbitý", "Hladový", "Hrdý", "Plačtivý", "Zvukový", "Skákavý", "Noční",
+                "Denní", "Plachý", "Domácí", "Divoký", "Myslící", "Chytrý", "Zpěvný",
+                "Barevný", "Ochranný", "Přátelský", "Opojný", "Veselý", "Lenivý"
+            ],
+            "Subjekt": [
+                "Lev", "Tygřík", "Velryba", "Delfín", "Koala", "Panda", "Kočka", "Pes",
+                "Veverka", "Pštros", "Žirafa", "Slon", "Krokodýl", "Hroch", "Krab",
+                "Motýl", "Pták", "Netopýr", "Ježek", "Králík", "Kůň", "Ovce", "Kráva", "Svišť"
+            ],
+            "Činnost": [
+                "hledá oříšky", "plave v oceánu", "skáče přes stromy", "je na louce",
+                "zpívá písničku", "dělá kotrmelce", "nosí klobouk", "běhá maraton",
+                "střídavě spí", "loví ryby", "žvýká trávu", "hází balónem", "hraje na housle",
+                "překonává stezku", "maluje stopami", "čte mapu", "dělá salto", "rozcvičuje se",
+                "skrývá se v keři", "tancuje v dešti"
+            ]
+        },
+        "Sporty": {
+            "Vlastnost": [
+                "Agilní", "Soutěživý", "Odolný", "Silný", "Šikovný", "Rychlý", "Výbušný",
+                "Vytrvalý", "Precizní", "Kreativní", "Strategický", "Obratný", "Soustředěný",
+                "Riskující", "Technický", "Elegantní", "Explozivní", "Zkušený", "Neústupný", "Přesný"
+            ],
+            "Subjekt": [
+                "Fotbalista", "Basketbalista", "Tenista", "Plavec", "Hráč hokeje", "Běžec",
+                "Cyklista", "Gymnast", "Skokan", "Boxer", "Judista", "Lyžař", "Snowboardista",
+                "Skateboardista", "Surfař", "Brankář", "Rychlobruslař", "Golfista", "Stolní tenista", "Raketář"
+            ],
+            "Činnost": [
+                "kopá penalty", "střílí trojky", "podává servisy", "plave motýlek", "brání gól",
+                "běží sprint", "šlape do pedálů", "provádí salto", "boxuje soupeře", "háže disk",
+                "skáče přes laťku", "odpalovací swing", "střílí gól", "vykopává roh", "trénuje tik",
+                "přeskakuje překážky", "jízdí na kole", "jíždí na vlnách", "provádí trik", "trénuje střelbu"
+            ]
+        },
+        "Jídlo a Pití": {
+            "Vlastnost": [
+                "Sladký", "Slaný", "Kořeněný", "Křupavý", "Měkký", "Krémový", "Hořký",
+                "Svěží", "Voňavý", "Pikantní", "Žvýkací", "Šťavnatý", "Teplý", "Studený",
+                "Nakládaný", "Grilovaný", "Pečený", "Různorodý", "Exotický", "Domácí"
+            ],
+            "Subjekt": [
+                "Pizza", "Hamburger", "Sushi", "Taco", "Palačinka", "Zmrzlina", "Knedlík",
+                "Salát", "Polévka", "Steak", "Grilované kuře", "Špagety", "Sendvič", "Těstoviny",
+                "Sýr", "Muffin", "Bageta", "Kafe", "Čaj", "Smoothie", "Sýr", "Pirožek", "Rohlík", "Čokoláda"
+            ],
+            "Činnost": [
+                "peče dort", "míchá koktejl", "smaží hranolky", "krájí zeleninu", "dusí rýži",
+                "griluje maso", "míchá salát", "loupá ovoce", "zalévá kávu", "šlehává smetanu",
+                "obsluhuje zákazníky", "balí sendviče", "podává dezert", "ochutnává polévku",
+                "taví sýr", "mixuje smoothie", "peče chleba", "nakládá zeleninu", "servíruje sushi", "zmrzuje zmrzlinu"
+            ]
+        },
+        "Filmy a Postavy": {
+            "Vlastnost": [
+                "Heroický", "Zlomyslný", "Komický", "Tajuplný", "Romantický", "Melancholický",
+                "Šílený", "Rozverný", "Elegantní", "Mystický", "Neohrožený", "Zaváhající",
+                "Vznešený", "Ironický", "Sarkastický", "Inspirativní", "Smutný", "Nekonvenční", "Chytrý", "Zoufalý"
+            ],
+            "Subjekt": [
+                "Superhrdina", "Padouch", "Detektiv", "Piráti", "Princezna", "Vědec", "Robot",
+                "Cizinec", "Vlkodlak", "Čaroděj", "Krotitel draků", "Šerif", "Kosmonaut", "Cestovatel",
+                "Kaskadér", "Režisér", "Herec", "Barman", "Novinář", "Knihovník", "Kouzelník", "Zloděj", "Špión", "Námořník"
+            ],
+            "Činnost": [
+                "zachraňuje svět", "plánuje loupež", "vyšetřuje vraždu", "plachtí po oceánu",
+                "bojuje s padouchem", "tančí na střeše", "řídí vesmírnou loď", "skrývá tajemství",
+                "vymýšlí vynález", "dobývá hrad", "hledá stříbrný meč", "vypíjí elixír", "píše scénář",
+                "hledá lásku", "pronásleduje stopu", "provádí kaskadérské kousky", "podvádí v karetním klubu",
+                "zpívá duet", "utíká před policií", "naviguje bouři"
+            ]
         }
     }
 
@@ -45,7 +140,7 @@ class ConnectionManager:
         self.active_connections: Dict[str, List[WebSocket]] = {}
         self.game_states: Dict[str, Dict[str, Any]] = {}
 
-    def get_player_websocket(self, game_code: str, username: str) -> WebSocket | None:
+    def get_player_websocket(self, game_code: str, username: str) -> Optional[WebSocket]:
         """Helper to find a player's websocket."""
         game_state = self.game_states.get(game_code)
         if game_state:
@@ -102,6 +197,18 @@ class ConnectionManager:
         game_state["players"].append({"username": username, "websocket": websocket})
         game_state["scores"][username] = 0
 
+        # Pošleme osobní zprávu nově připojenému websocketu s aktuálním stavem hráčů,
+        # aby klient nezmeškal první aktualizaci, pokud broadcast dorazí dříve než
+        # klient zaregistruje svůj onmessage handler.
+        await self.send_personal_message({
+            "type": "player_joined",
+            "username": username,
+            "players": [{"username": p["username"]} for p in game_state["players"]],
+            "host": game_state["host"]
+        }, websocket)
+
+        # Následně broadcastujeme ke všem (včetně nově připojeného), aby ostatní klienti
+        # dostali informaci o novém hráči.
         await self.broadcast(game_code, {
             "type": "player_joined", "username": username,
             "players": [{"username": p["username"]} for p in game_state["players"]],
@@ -156,10 +263,200 @@ class ConnectionManager:
 
     async def broadcast(self, game_code: str, message: dict):
         if game_code in self.active_connections:
-            for connection in self.active_connections[game_code]:
-                await connection.send_json(message)
-
+            # Send concurrently to all connections and ignore failures per connection
+            coros = []
+            for connection in list(self.active_connections[game_code]):
+                async def safe_send(conn):
+                    try:
+                        await conn.send_json(message)
+                    except Exception:
+                        # On failure, attempt to remove dead connection
+                        try:
+                            self.active_connections[game_code].remove(conn)
+                        except Exception:
+                            pass
+                coros.append(safe_send(connection))
+            # fire-and-forget but await to let asyncio schedule sends without blocking the main loop
+            await asyncio.gather(*coros, return_exceptions=True)
 manager = ConnectionManager()
+
+# Initialize SQLite DB for leaderboard/history
+DB_PATH = Path("games.db")
+_conn: sqlite3.Connection = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+def init_db():
+    cur = _conn.cursor()
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS games (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        game_code TEXT,
+        timestamp REAL,
+        winner TEXT,
+        winner_score INTEGER,
+        scores_json TEXT
+    )
+    """)
+    _conn.commit()
+
+init_db()
+
+def _save_game_result_sync(game_code: str, scores: dict) -> None:
+    # Determine winner
+    if not scores:
+        winner = None
+        winner_score = 0
+    else:
+        winner, winner_score = max(scores.items(), key=lambda kv: kv[1])
+    cur = _conn.cursor()
+    cur.execute(
+        "INSERT INTO games (game_code, timestamp, winner, winner_score, scores_json) VALUES (?, ?, ?, ?, ?)",
+        (game_code, time.time(), winner, int(winner_score) if winner is not None else 0, json.dumps(scores, ensure_ascii=False)),
+    )
+    _conn.commit()
+
+async def save_game_result(game_code: str, scores: dict):
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _save_game_result_sync, game_code, scores)
+
+@app.get('/leaderboard/top')
+async def get_top_leaderboard(limit: int = 10):
+    cur = _conn.cursor()
+    cur.execute("SELECT game_code, timestamp, winner, winner_score FROM games WHERE winner IS NOT NULL ORDER BY winner_score DESC LIMIT ?", (limit,))
+    rows = cur.fetchall()
+    result = []
+    for game_code, ts, winner, winner_score in rows:
+        result.append({
+            'game_code': game_code,
+            'timestamp': datetime.fromtimestamp(ts).isoformat(),
+            'winner': winner,
+            'winner_score': winner_score,
+        })
+    return JSONResponse(result)
+
+@app.get('/games')
+async def get_games(limit: int = 50):
+    cur = _conn.cursor()
+    cur.execute("SELECT id, game_code, timestamp, winner, winner_score, scores_json FROM games ORDER BY id DESC LIMIT ?", (limit,))
+    rows = cur.fetchall()
+    result = []
+    for id_, game_code, ts, winner, winner_score, scores_json in rows:
+        try:
+            scores = json.loads(scores_json) if scores_json else {}
+        except Exception:
+            scores = {}
+        result.append({
+            'id': id_,
+            'game_code': game_code,
+            'timestamp': datetime.fromtimestamp(ts).isoformat(),
+            'winner': winner,
+            'winner_score': winner_score,
+            'scores': scores,
+        })
+    return JSONResponse(result)
+
+
+@app.get('/leaderboard/aggregate')
+async def get_aggregated_leaderboard(limit: int = 50):
+    """Return aggregated leaderboard across all games: total score, games played, wins, highest score, average score."""
+    cur = _conn.cursor()
+    cur.execute("SELECT timestamp, winner, scores_json FROM games")
+    rows = cur.fetchall()
+
+    stats: Dict[str, Dict[str, Any]] = {}
+    for ts, winner, scores_json in rows:
+        try:
+            scores = json.loads(scores_json) if scores_json else {}
+        except Exception:
+            continue
+        for player, sc in scores.items():
+            try:
+                sc_int = int(sc)
+            except Exception:
+                try:
+                    sc_int = int(float(sc))
+                except Exception:
+                    sc_int = 0
+            ent = stats.setdefault(player, {"total_score": 0, "games_played": 0, "wins": 0, "highest_score": 0, "last_seen": 0})
+            ent["total_score"] += sc_int
+            ent["games_played"] += 1
+            if sc_int > ent["highest_score"]:
+                ent["highest_score"] = sc_int
+            if ts and ts > ent["last_seen"]:
+                ent["last_seen"] = ts
+        if winner:
+            stats.setdefault(winner, {"total_score": 0, "games_played": 0, "wins": 0, "highest_score": 0, "last_seen": 0})["wins"] += 1
+
+    # Prepare list with computed averages and formatted timestamps
+    out = []
+    for player, ent in stats.items():
+        avg = ent["total_score"] / ent["games_played"] if ent["games_played"] else 0
+        out.append({
+            "player": player,
+            "total_score": ent["total_score"],
+            "games_played": ent["games_played"],
+            "wins": ent["wins"],
+            "highest_score": ent["highest_score"],
+            "average_score": round(avg, 2),
+            "last_seen": datetime.fromtimestamp(ent["last_seen"]).isoformat() if ent["last_seen"] else None,
+        })
+
+    out.sort(key=lambda x: x["total_score"], reverse=True)
+    return JSONResponse(out[:limit])
+
+
+@app.get('/leaderboard/player/{username}')
+async def get_player_stats(username: str, recent_limit: int = 10):
+    """Return aggregated stats for a specific player and recent game history entries where they participated."""
+    cur = _conn.cursor()
+    cur.execute("SELECT id, game_code, timestamp, winner, winner_score, scores_json FROM games ORDER BY id DESC")
+    rows = cur.fetchall()
+
+    total_score = 0
+    games_played = 0
+    wins = 0
+    highest_score = 0
+    recent_games = []
+
+    for id_, game_code, ts, winner, winner_score, scores_json in rows:
+        try:
+            scores = json.loads(scores_json) if scores_json else {}
+        except Exception:
+            scores = {}
+        if username in scores:
+            try:
+                sc = int(scores[username])
+            except Exception:
+                try:
+                    sc = int(float(scores[username]))
+                except Exception:
+                    sc = 0
+            total_score += sc
+            games_played += 1
+            if sc > highest_score:
+                highest_score = sc
+            is_winner = (winner == username)
+            if is_winner:
+                wins += 1
+            if len(recent_games) < recent_limit:
+                recent_games.append({
+                    'id': id_,
+                    'game_code': game_code,
+                    'timestamp': datetime.fromtimestamp(ts).isoformat(),
+                    'score': sc,
+                    'winner': winner,
+                    'is_winner': is_winner,
+                })
+
+    avg = total_score / games_played if games_played else 0
+    result = {
+        'player': username,
+        'total_score': total_score,
+        'games_played': games_played,
+        'wins': wins,
+        'highest_score': highest_score,
+        'average_score': round(avg, 2),
+        'recent_games': recent_games,
+    }
+    return JSONResponse(result)
 
 def get_words_for_round(package_name: str):
     package = WORD_PACKAGES.get(package_name, list(WORD_PACKAGES.values())[0])
@@ -265,7 +562,7 @@ def calculate_tiered_speed_bonus(elapsed_time: float) -> int:
     else:
         return 5   # Bronzový bonus
 
-def check_guess(game_state: Dict[str, Any], guess_normalized: str) -> tuple[bool, str]:
+def check_guess(game_state: Dict[str, Any], guess_normalized: str) -> Tuple[bool, str]:
     """
     Checks if a guess is correct against the current phrase.
     Returns a tuple: (is_correct, revealed_word).
@@ -408,15 +705,75 @@ async def end_game(game_code: str):
     game_state = manager.game_states.get(game_code)
     if not game_state: return
 
+    # Persist results before broadcasting
+    try:
+        await save_game_result(game_code, game_state.get("scores", {}))
+    except Exception as e:
+        print(f"Warning: failed to persist game result: {e}")
+
     await manager.broadcast(game_code, {"type": "game_end", "final_scores": game_state["scores"]})
 
     await asyncio.sleep(2)
     if game_code in manager.active_connections:
         for conn in manager.active_connections[game_code]:
-            await conn.close(code=1000)
-        del manager.active_connections[game_code]
-        del manager.game_states[game_code]
+            try:
+                await conn.close(code=1000)
+            except Exception:
+                pass
+        try:
+            del manager.active_connections[game_code]
+        except Exception:
+            pass
+        try:
+            del manager.game_states[game_code]
+        except Exception:
+            pass
 
 @app.get("/")
 async def get_root():
     return {"message": "Vítejte v backendu Koncept Kreslíři!"}
+@app.get('/leaderboard/ranking')
+async def get_leaderboard_ranking(limit: int = 50):
+    """Return leaderboard ranked primarily by wins, then average score, then total score."""
+    cur = _conn.cursor()
+    cur.execute("SELECT timestamp, winner, scores_json FROM games")
+    rows = cur.fetchall()
+
+    stats: Dict[str, Dict[str, Any]] = {}
+    for ts, winner, scores_json in rows:
+        try:
+            scores = json.loads(scores_json) if scores_json else {}
+        except Exception:
+            continue
+        for player, sc in scores.items():
+            try:
+                sc_int = int(sc)
+            except Exception:
+                try:
+                    sc_int = int(float(sc))
+                except Exception:
+                    sc_int = 0
+            ent = stats.setdefault(player, {"total_score": 0, "games_played": 0, "wins": 0, "scores_list": [], "last_seen": 0})
+            ent["total_score"] += sc_int
+            ent["games_played"] += 1
+            ent["scores_list"].append(sc_int)
+            if ts and ts > ent["last_seen"]:
+                ent["last_seen"] = ts
+        if winner:
+            stats.setdefault(winner, {"total_score": 0, "games_played": 0, "wins": 0, "scores_list": [], "last_seen": 0})["wins"] += 1
+
+    out = []
+    for player, ent in stats.items():
+        avg = sum(ent["scores_list"]) / len(ent["scores_list"]) if ent["scores_list"] else 0
+        out.append({
+            "player": player,
+            "wins": ent.get("wins", 0),
+            "total_score": ent.get("total_score", 0),
+            "games_played": ent.get("games_played", 0),
+            "average_score": round(avg, 2),
+            "last_seen": datetime.fromtimestamp(ent["last_seen"]).isoformat() if ent["last_seen"] else None,
+        })
+
+    # sort by wins desc, then average_score desc, then total_score desc
+    out.sort(key=lambda x: (x["wins"], x["average_score"], x["total_score"]), reverse=True)
+    return JSONResponse(out[:limit])

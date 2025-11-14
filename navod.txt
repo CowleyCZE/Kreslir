@@ -29,17 +29,20 @@ Pokud jste tak ještě neučinili, naklonujte si repozitář na svůj počítač
     pip install -r requirements.txt
     ```
 
-4.  **Spusťte backend server:**
+4.  **Spusťte backend server (přístupný v lokální síti):**
+    Pokud chcete, aby se k serveru mohli připojit hráči z jiných zařízení ve stejné Wi‑Fi síti (PC i mobil), spusťte uvicorn takto:
     ```bash
-    uvicorn main:app --reload
+    uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     ```
-    Server by měl běžet na adrese `http://localhost:8000`.
+    Server bude dostupný na adrese `http://<IP_HOSTA>:8000` (např. `http://192.168.1.100:8000`).
+
+> Poznámka: IP adresu hosta zjistíte příkazem `ipconfig` (Windows) nebo `ip addr`/`ifconfig` (Linux/Mac). Všechna zařízení musí být ve stejné síti (Wi‑Fi/LAN).
 
 ## 3. Nastavení frontendu
 
-1.  **Přejděte do adresáře `koncept-kresliri`:**
+1.  **Přejděte do adresáře frontendu (projektu):**
     ```bash
-    cd koncept-kresliri
+    cd frontend
     ```
 
 2.  **Nainstalujte závislosti:**
@@ -47,17 +50,80 @@ Pokud jste tak ještě neučinili, naklonujte si repozitář na svůj počítač
     npm install
     ```
 
-3.  **Spusťte frontend aplikaci:**
+3.  **Konfigurace pro hraní z více zařízení v lokální síti (doporučeno):**
+
+    - Pokud chcete, aby mobilní telefon a PC používali hosta jako backend a WebSocket server, nastavte proměnné prostředí před spuštěním frontendu.
+
+    - Příkazy pro Windows PowerShell (spustit v PowerShellu):
+      ```powershell
+      # nastavte URL backendu (nahraďte IP adresu IP hostitele)
+      $env:VITE_BACKEND_URL = 'http://192.168.1.100:8000'
+      $env:VITE_BACKEND_WS = 'ws://192.168.1.100:8000/ws'
+      # spusťte Vite dostupný v síti
+      npm run dev -- --host
+      ```
+
+    - Příkazy pro Linux / macOS (Bash):
+      ```bash
+      # nastavte URL backendu (nahraďte IP adresu IP hostitele)
+      export VITE_BACKEND_URL='http://192.168.1.100:8000'
+      export VITE_BACKEND_WS='ws://192.168.1.100:8000/ws'
+      # spusťte Vite dostupný v síti
+      npm run dev -- --host
+      ```
+
+    - Spuštění s `--host` zajistí, že Vite bude dostupné na síťové IP hosta (např. `http://192.168.1.100:5173`).
+
+4.  **Spusťte frontend aplikaci (alternativně):**
     ```bash
-    npm run dev
+    npm run dev -- --host
     ```
-    Aplikace by se měla otevřít v prohlížeči na adrese `http://localhost:5173` (nebo na jiném portu, pokud je 5173 obsazený).
+    Aplikace bude přístupná na `http://<IP_HOSTA>:5173`.
 
-## 4. Hraní hry
+## 3b. Automatický skript pro lokální vývoj (backend + frontend jedním příkazem)
 
-1.  Otevřete v prohlížeči adresu, na které běží frontend.
-2.  Zadejte své jméno a vytvořte novou hru nebo se připojte k existující pomocí kódu hry.
-3.  Sdílejte kód hry s přáteli, aby se mohli připojit.
-4.  Hostitel vybere balíček slov.
-5.  Jakmile jsou v místnosti alespoň dva hráči, hostitel může spustit hru.
-6.  Užijte si hru!
+Pro pohodlné spuštění obou částí jedním příkazem jsem přidal skripty do složky `scripts/`:
+
+- PowerShell: `scripts/start-dev.ps1` (Windows PowerShell)
+- Bash: `scripts/start-dev.sh` (Linux/macOS)
+
+Odkaz na skripty v repozitáři: `./scripts/start-dev.ps1` a `./scripts/start-dev.sh`.
+
+Použití (PowerShell):
+```powershell
+# v kořeni repozitáře
+.\scripts\start-dev.ps1
+```
+
+Použití (Bash):
+```bash
+# v kořeni repozitáře
+./scripts/start-dev.sh
+```
+
+Skript spustí backend (uvicorn) a frontend (Vite) a ponechá je běžet. Skripty také registrují přerušení (SIGINT) a při přerušení zastaví obě služby.
+
+## 4. Jak se připojí hráči (PC + mobil)
+
+1.  Na hostitelském počítači spusťte backend a frontend podle výše uvedených kroků (ručně nebo pomocí skriptu).
+2.  Na PC otevřete `http://<IP_HOSTA>:5173` v prohlížeči.
+3.  Na mobilním telefonu otevřete stejnou adresu (např. `http://192.168.1.100:5173`) v prohlížeči připojeném do téže Wi‑Fi sítě.
+4.  Jeden hráč vytvoří novou hru (vygeneruje se kód), ostatní hráči na PC/iPhonu/Androidu tento kód zadají a připojí se.
+5.  WebSocket komunikace proběhne přes backend hostovaný na `http://<IP_HOSTA>:8000` (nebo přes `ws://<IP_HOSTA>:8000/ws`).
+
+## 5. Volitelné: když nelze použít lokální síť
+
+- Pokud jsou zařízení v různých sítích nebo máte NAT/firewall, můžete použít tunelovací nástroj (např. ngrok) k vystavení backendu přes veřejnou adresu:
+  1. Spusťte ngrok na port 8000: `ngrok http 8000`.
+  2. Vytvoří se veřejná URL (např. `https://abcd-1234.ngrok.io`). Tu nastavte do proměnných prostředí `VITE_BACKEND_URL` a `VITE_BACKEND_WS` (pro WebSocket použijte `wss://.../ws`).
+
+## 6. Hraní hry
+
+1.  Otevřete frontend na libovolném zařízení v síti (PC nebo mobil).
+2.  Zadejte své jméno a vytvořte novou hru nebo se připojte k existující pomocí kódu.
+3.  Hostitel vybere balíček slov a spustí hru.
+4.  Užijte si hru! 
+
+---
+
+Tento návod poskytuje kroky pro rychlé lokální spuštění a připojení více zařízení v jedné síti. Pro nasazení na internetu použijte veřejný server nebo reverzní proxy a TLS (HTTPS/WSS).

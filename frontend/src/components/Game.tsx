@@ -34,10 +34,9 @@ interface GameProps {
   gameCode: string;
 }
 
-const Game = ({ socket, username, gameCode }: GameProps): React.ReactNode => {
+const Game: React.FC<GameProps> = ({ socket, username, gameCode }) => {
   const { lastMessage, sendMessage } = useWebSocket(socket);
 
-  const [isDrawing, setIsDrawing] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
     players: [],
     scores: {},
@@ -57,12 +56,16 @@ const Game = ({ socket, username, gameCode }: GameProps): React.ReactNode => {
   const [availablePackages, setAvailablePackages] = useState<string[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string>('');
   const [pointsAnimation, setPointsAnimation] = useState<{ username: string; points: number; bonus: number } | null>(null);
-  const lastPosition = useRef<{ x: number; y: number } | null>(null);
   // State for drawing tools
   const [color, setColor] = useState('#000000');
   const [brushSize, setBrushSize] = useState(5);
   const [guessedPlayers, setGuessedPlayers] = useState<Set<string>>(new Set());
   const [roundDuration, setRoundDuration] = useState(0);
+
+  // Mobile UI states
+  const [mobileShowChat, setMobileShowChat] = useState(false);
+  const [mobileShowScores, setMobileShowScores] = useState(false);
+  const [canvasFullscreen, setCanvasFullscreen] = useState(false);
 
   // --- WebSocket Message Handlers ---
   const handlePlayerUpdate = useCallback((message: any) => {
@@ -258,49 +261,6 @@ const Game = ({ socket, username, gameCode }: GameProps): React.ReactNode => {
     setBrushSize(newSize);
   }, []);
 
-  const draw = useCallback(({ nativeEvent }: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || username !== gameState?.current_artist) return;
-    const { offsetX, offsetY } = nativeEvent;
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext('2d');
-    if (!context || !lastPosition.current || !canvas) return;
-
-    const data = {
-      x0: lastPosition.current.x,
-      y0: lastPosition.current.y,
-      x1: offsetX,
-      y1: offsetY,
-      color: color,
-      lineWidth: brushSize,
-    };
-
-    sendMessage({ type: 'drawing_data', data });
-
-    lastPosition.current = { x: offsetX, y: offsetY }; 
-  }, [isDrawing, username, gameState?.current_artist, sendMessage]);
-
-  const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (username !== gameState?.current_artist) return;
-    const { offsetX, offsetY } = e.nativeEvent;
-    const context = (e.target as HTMLCanvasElement).getContext('2d');
-    if (!context) return;
-    context.strokeStyle = color;
-    context.lineWidth = brushSize;
-    context.beginPath();
-    context.moveTo(offsetX, offsetY);
-    setIsDrawing(true);
-    lastPosition.current = { x: offsetX, y: offsetY };
-  }, [username, gameState?.current_artist, color, brushSize]);
-
-  const finishDrawing = useCallback(() => {
-    if (username !== gameState?.current_artist) return;
-    const context = canvasRef.current?.getContext('2d');
-    if (!context) return;
-    context.closePath();
-    setIsDrawing(false);
-    lastPosition.current = null;
-  }, [username, gameState?.current_artist]);
-
   if (!gameState.players.length && !gameState.game_started) {
     return <div>Načítání...</div>;
   }
@@ -313,16 +273,31 @@ const Game = ({ socket, username, gameCode }: GameProps): React.ReactNode => {
       {/* Levá část - Plátno a nástroje */}
       <div className="flex flex-col flex-grow w-full md:w-2/3 gap-4">
         <div className="relative flex-grow bg-white rounded-xl shadow-md overflow-hidden">
-          <Canvas
-            ref={canvasRef}
-            isArtist={username === gameState.current_artist}
-            startDrawing={startDrawing}
-            finishDrawing={finishDrawing}
-            draw={draw}
-            color={color}
-            brushSize={brushSize}
-          />
-          <div className="absolute top-2 right-2 bg-gray-800/50 p-2 rounded-lg text-white">Menu</div>
+          {/* Canvas area: allow fullscreen on mobile */}
+          <div className={`w-full h-full ${canvasFullscreen ? 'fixed inset-0 z-50 bg-gray-800' : ''}`}>
+            <div className={`${canvasFullscreen ? 'w-full h-full' : 'w-full h-[60vh] md:h-full'}`}>
+              <Canvas
+                ref={canvasRef}
+                isArtist={username === gameState.current_artist}
+                sendMessage={sendMessage}
+                color={color}
+                brushSize={brushSize}
+              />
+            </div>
+            {/* Fullscreen close button */}
+            {canvasFullscreen && (
+              <button onClick={() => setCanvasFullscreen(false)} className="absolute top-4 right-4 z-60 bg-gray-700 text-white px-3 py-2 rounded-md">Zavřít</button>
+            )}
+          </div>
+
+          {/* Mobile control buttons */}
+          <div className="absolute bottom-4 left-4 flex gap-2 md:hidden z-50">
+            <button onClick={() => setMobileShowChat(true)} className="bg-blue-600 text-white px-3 py-2 rounded-md shadow">Chat</button>
+            <button onClick={() => setMobileShowScores(true)} className="bg-green-600 text-white px-3 py-2 rounded-md shadow">Skóre</button>
+            <button onClick={() => setCanvasFullscreen(true)} className="bg-gray-800 text-white px-3 py-2 rounded-md shadow">Plátno</button>
+          </div>
+
+          <div className="absolute top-2 right-2 bg-gray-800/50 p-2 rounded-lg text-white hidden md:block">Menu</div>
         </div>
         {username === gameState.current_artist && (
           <div className="flex-shrink-0 bg-gray-600 p-3 rounded-xl shadow-md">
@@ -358,7 +333,7 @@ const Game = ({ socket, username, gameCode }: GameProps): React.ReactNode => {
               <p className="text-sm">Kreslí: {gameState.current_artist}</p>
               <Timer initialTime={roundDuration} />
             </div>
-            <div className="mt-4 text-2xl font-bold tracking-widest">
+            <div className="mt-4 text-2xl font-bold tracking-widest break-words">
               {username === gameState.current_artist && gameState.full_phrase
                 ? gameState.full_phrase
                 : gameState.masked_phrase}
@@ -387,12 +362,50 @@ const Game = ({ socket, username, gameCode }: GameProps): React.ReactNode => {
           />
         </div>
 
-        <ChatBox
-          messages={chatMessages}
-          onSendMessage={handleSendMessage}
-          isArtist={username === gameState.current_artist}
-        />
+        {/* Desktop chat always visible; on mobile we use bottom sheet */}
+        <div className="hidden md:block">
+          <ChatBox
+            messages={chatMessages}
+            onSendMessage={handleSendMessage}
+            isArtist={username === gameState.current_artist}
+          />
+        </div>
       </aside>
+
+      {/* Mobile overlays/drawers */}
+      {mobileShowChat && (
+        <div className="fixed inset-0 z-60 flex items-end md:hidden">
+          <div className="w-full bg-gray-800 rounded-t-xl p-3 shadow-xl max-h-[70vh] overflow-auto">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-bold">Chat</h3>
+              <button onClick={() => setMobileShowChat(false)} className="text-gray-300">Zavřít</button>
+            </div>
+            <ChatBox
+              messages={chatMessages}
+              onSendMessage={(m) => { handleSendMessage(m); setMobileShowChat(false); }}
+              isArtist={username === gameState.current_artist}
+            />
+          </div>
+        </div>
+      )}
+
+      {mobileShowScores && (
+        <div className="fixed inset-0 z-60 flex items-start justify-end md:hidden">
+          <div className="w-full bg-gray-800 p-3 shadow-xl max-h-[80vh] overflow-auto">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-bold">Skóre</h3>
+              <button onClick={() => setMobileShowScores(false)} className="text-gray-300">Zavřít</button>
+            </div>
+            <Scoreboard
+              players={gameState.players}
+              scores={gameState.scores}
+              currentArtist={gameState.current_artist}
+              guessedPlayers={guessedPlayers}
+            />
+          </div>
+        </div>
+      )}
+
     </main>
   );
 };

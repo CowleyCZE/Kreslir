@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
+import Leaderboards from './components/Leaderboards';
 import './App.css';
 
 function App() {
@@ -31,12 +32,22 @@ function App() {
       setIsConnecting(true);
       setConnectionError(null);
       
-      // Use environment variable for backend URL or fallback to localhost:8000
+      // Use environment variable for backend URL or fallback to current host so Vite proxy can forward /ws in dev
+      const fallbackScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const fallbackHost = window.location.host; // includes port
+      const env: any = import.meta;
       const backendWsUrl =
-        import.meta.env.VITE_BACKEND_WS ||
-        `ws://${window.location.hostname}:8000/ws/${gameCode}/${username}`;
-      
-      const ws = new WebSocket(backendWsUrl);
+        (env.env && env.env.VITE_BACKEND_WS) || `${fallbackScheme}://${fallbackHost}/ws/${gameCode}/${username}`;
+
+      let ws: WebSocket;
+      try {
+        ws = new WebSocket(backendWsUrl);
+      } catch (err) {
+        console.error('WebSocket construction failed:', err);
+        setIsConnecting(false);
+        setConnectionError('Nepodařilo se vytvořit WebSocket. Zkontrolujte konfiguraci URL.');
+        return;
+      }
 
       ws.onopen = () => {
         console.log('WebSocket connected');
@@ -77,7 +88,7 @@ function App() {
       setSocket(ws);
 
       return () => {
-        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
           ws.close(1000, 'Component unmounting');
         }
       };
@@ -87,13 +98,18 @@ function App() {
   return (
     <div className="App bg-gray-800 text-white min-h-screen flex items-center justify-center p-4">
       {!inGame || !socket ? (
-        <Lobby
-          onJoinGame={handleJoinGame}
-          onCreateGame={handleCreateGame}
-          connectionError={connectionError}
-          isConnecting={isConnecting}
-          onDismissError={() => setConnectionError(null)}
-        />
+        <div className="w-full max-w-5xl">
+          <Lobby
+            onJoinGame={handleJoinGame}
+            onCreateGame={handleCreateGame}
+            connectionError={connectionError}
+            isConnecting={isConnecting}
+            onDismissError={() => setConnectionError(null)}
+          />
+          <div className="mt-6">
+            <Leaderboards />
+          </div>
+        </div>
       ) : (
         <Game socket={socket} username={username} gameCode={gameCode} />
       )}
