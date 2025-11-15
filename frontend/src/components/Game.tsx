@@ -73,37 +73,8 @@ const Game: React.FC<GameProps> = ({ socket, username, gameCode }) => {
   const MOBILE_TOOLBAR_HEIGHT = 84; // px
 
   // --- WebSocket Message Handlers ---
-  const handlePlayerUpdate = useCallback((message: any) => {
-    setGameState((prevState) => ({
-      ...prevState,
-      players: message.players ?? prevState.players,
-      host: message.host ?? prevState.host,
-    }));
-  }, []);
-
-  const handleRoundStart = useCallback((message: any) => {
-    setGameState((prevState) => ({
-      ...prevState,
-      current_round: message.round,
-      total_rounds: message.total_rounds,
-      current_artist: message.artist,
-      game_started: true,
-      masked_phrase: '',
-      full_phrase: '',
-    }));
-    setWordOptions(null);
-    setChatMessages([]);
-    setRoundDuration(message.duration ?? 90);
-    setGuessedPlayers(new Set());
-  }, []);
-
-  const handlePhraseSelected = useCallback((message: any) => {
-    setGameState((prevState) => ({
-      ...prevState,
-      masked_phrase: message.masked_phrase ?? prevState.masked_phrase,
-      full_phrase: message.full_phrase ?? prevState.full_phrase,
-    }));
-  }, []);
+  // NOTE: The logic for these handlers is now directly inside the main useEffect
+  // to avoid stale closures.
 
   const getBonusTierInfo = (bonus: number) => {
     if (bonus >= 50) return { icon: '⚡', name: 'Bleskový bonus' };
@@ -113,83 +84,16 @@ const Game: React.FC<GameProps> = ({ socket, username, gameCode }) => {
     return null;
   };
 
-  const handleWordGuessed = useCallback((message: any) => {
-    setGuessedPlayers(prev => new Set(prev).add(message.guesser));
-
-    const speedBonus = message.speed_bonus || 0;
-    const bonusInfo = getBonusTierInfo(speedBonus);
-    const chatMessageText = bonusInfo
-      ? `Uhodl slovo "${message.word}"! (${bonusInfo.icon} ${bonusInfo.name} +${speedBonus} bodů)`
-      : `Uhodl slovo "${message.word}"! (+${message.points_earned} bodů)`;
-
-    setChatMessages((prevMessages) => [
-      ...prevMessages,
-      {
-        username: message.guesser,
-        message: chatMessageText,
-        type: 'correct',
-      },
-    ]);
-    if (message.points_earned) {
-      setPointsAnimation({
-        username: message.guesser,
-        points: message.points_earned,
-        bonus: speedBonus,
-      });
-      setTimeout(() => setPointsAnimation(null), 2000);
-    }
-    setGameState((prevState) => ({
-      ...prevState,
-      masked_phrase: message.revealed_phrase,
-      scores: message.scores ?? prevState.scores,
-    }));
-  }, []);
-
-  const handleRoundEnd = useCallback((message: any) => {
-    setGameState((prevState) => ({
-      ...prevState,
-      masked_phrase: message.full_phrase ?? prevState.masked_phrase,
-      scores: message.scores ?? prevState.scores,
-    }));
-    setRoundDuration(0);
-  }, []);
-
-  const handleGameEnd = useCallback((message: any) => {
-    setGameState((prevState) => ({
-      ...prevState,
-      scores: message.final_scores ?? prevState.scores,
-      game_over: true,
-    }));
-    setRoundDuration(0);
-  }, []);
-
-  const handleDrawingUpdate = useCallback((message: any) => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const context = canvas.getContext('2d');
-      if (context) {
-        const { x0, y0, x1, y1, color, lineWidth } = message.data;
-        context.beginPath();
-        context.moveTo(x0, y0);
-        context.lineTo(x1, y1);
-        context.lineWidth = lineWidth;
-        context.strokeStyle = color;
-        context.stroke();
-        context.closePath();
-      }
-    }
-  }, []);
-
-  const handleChatMessage = useCallback((message: any) => {
-    setChatMessages((prevMessages) => [...prevMessages, { username: message.username, message: message.message, type: 'guess' }]);
-  }, []);
-
-    useEffect(() => {
+  useEffect(() => {
     if (lastMessage) {
       switch (lastMessage.type) {
         case 'player_joined':
         case 'player_left':
-          handlePlayerUpdate(lastMessage);
+          setGameState((prevState) => ({
+            ...prevState,
+            players: lastMessage.players ?? prevState.players,
+            host: lastMessage.host ?? prevState.host,
+          }));
           break;
         case 'new_host':
           setGameState((prevState) => ({ ...prevState, host: lastMessage.host }));
@@ -198,19 +102,89 @@ const Game: React.FC<GameProps> = ({ socket, username, gameCode }) => {
           setGameState((prevState) => ({ ...prevState, selected_package: lastMessage.package }));
           break;
         case 'round_start':
-          handleRoundStart(lastMessage);
+          setGameState((prevState) => ({
+            ...prevState,
+            current_round: lastMessage.round,
+            total_rounds: lastMessage.total_rounds,
+            current_artist: lastMessage.artist,
+            game_started: true,
+            masked_phrase: '',
+            full_phrase: '',
+          }));
+          setWordOptions(null);
+          setChatMessages([]);
+          setRoundDuration(lastMessage.duration ?? 90);
+          setGuessedPlayers(new Set());
           break;
         case 'phrase_selected':
-          handlePhraseSelected(lastMessage);
+          setGameState((prevState) => ({
+            ...prevState,
+            masked_phrase: lastMessage.masked_phrase ?? prevState.masked_phrase,
+            full_phrase: lastMessage.full_phrase ?? prevState.full_phrase,
+          }));
           break;
         case 'word_guessed':
-          handleWordGuessed(lastMessage);
+          setGuessedPlayers(prev => new Set(prev).add(lastMessage.guesser));
+
+          const speedBonus = lastMessage.speed_bonus || 0;
+          const bonusInfo = getBonusTierInfo(speedBonus);
+          const chatMessageText = bonusInfo
+            ? `Uhodl slovo "${lastMessage.word}"! (${bonusInfo.icon} ${bonusInfo.name} +${speedBonus} bodů)`
+            : `Uhodl slovo "${lastMessage.word}"! (+${lastMessage.points_earned} bodů)`;
+
+          setChatMessages((prevMessages) => [
+            ...prevMessages,
+            {
+              username: lastMessage.guesser,
+              message: chatMessageText,
+              type: 'correct',
+            },
+          ]);
+          if (lastMessage.points_earned) {
+            setPointsAnimation({
+              username: lastMessage.guesser,
+              points: lastMessage.points_earned,
+              bonus: speedBonus,
+            });
+            setTimeout(() => setPointsAnimation(null), 2000);
+          }
+          setGameState((prevState) => ({
+            ...prevState,
+            masked_phrase: lastMessage.revealed_phrase,
+            scores: lastMessage.scores ?? prevState.scores,
+          }));
           break;
         case 'round_end':
-          handleRoundEnd(lastMessage);
+          setGameState((prevState) => ({
+            ...prevState,
+            masked_phrase: lastMessage.full_phrase ?? prevState.masked_phrase,
+            scores: lastMessage.scores ?? prevState.scores,
+          }));
+          setRoundDuration(0);
           break;
         case 'game_end':
-          handleGameEnd(lastMessage);
+          setGameState((prevState) => ({
+            ...prevState,
+            scores: lastMessage.final_scores ?? prevState.scores,
+            game_over: true,
+          }));
+          setRoundDuration(0);
+          break;
+        case 'drawing_update':
+          const canvas = canvasRef.current;
+          if (canvas) {
+            const context = canvas.getContext('2d');
+            if (context) {
+              const { x0, y0, x1, y1, color, lineWidth } = lastMessage.data;
+              context.beginPath();
+              context.moveTo(x0, y0);
+              context.lineTo(x1, y1);
+              context.lineWidth = lineWidth;
+              context.strokeStyle = color;
+              context.stroke();
+              context.closePath();
+            }
+          }
           break;
         case 'available_packages':
           const currentPackage = lastMessage.selected_package ?? '';
@@ -221,22 +195,19 @@ const Game: React.FC<GameProps> = ({ socket, username, gameCode }) => {
         case 'select_phrase_options':
           setWordOptions(lastMessage.words);
           break;
-        case 'drawing_update':
-          handleDrawingUpdate(lastMessage);
-          break;
         case 'canvas_cleared':
-          const canvas = canvasRef.current;
-          if (canvas) {
-            const context = canvas.getContext('2d');
-            context?.clearRect(0, 0, canvas.width, canvas.height);
+          const canvasElem = canvasRef.current;
+          if (canvasElem) {
+            const context = canvasElem.getContext('2d');
+            context?.clearRect(0, 0, canvasElem.width, canvasElem.height);
           }
           break;
         case 'chat_message':
-          handleChatMessage(lastMessage);
+          setChatMessages((prevMessages) => [...prevMessages, { username: lastMessage.username, message: lastMessage.message, type: 'guess' }]);
           break;
       }
     }
-  }, [lastMessage, handlePlayerUpdate, handleRoundStart, handlePhraseSelected, handleWordGuessed, handleRoundEnd, handleGameEnd, handleDrawingUpdate, handleChatMessage]);
+  }, [lastMessage]);
   const handleSendMessage = useCallback((message: string) => {
     sendMessage({ type: 'guess', guess: message });
   }, [sendMessage]);

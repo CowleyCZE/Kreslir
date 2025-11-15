@@ -194,7 +194,7 @@ const Canvas = forwardRef<HTMLCanvasElement, CanvasProps>(
     return (
       <canvas
         ref={ref}
-        className={`w-full h-full ${isArtist ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
+        className={`w-full h-full touch-none ${isArtist ? 'cursor-crosshair' : 'cursor-not-allowed'}`}
         // pointer events handled in effect
       />
     );
