@@ -1,20 +1,26 @@
-"node_modules/" 
-"**/node_modules/" 
-"__pycache__/" 
-".vs/" 
-".vscode/" 
-"backend/__pycache__/" 
-"backend/package-lock.json" 
-"koncept-k-kresliri/package-lock.json" 
-"frontend/node_modules/" 
-"frontend/package-lock.json" 
-"frontend/node_modules/" 
-"frontend/node_modules/.vite/" 
-"frontend/node_modules/" 
-"frontend/node_modules/.vite/" 
+# Dependencies
+/node_modules
 /frontend/node_modules
-/frontend/package-lock.json
+/backend/venv
+
+# Build output
+/frontend/dist
+
+# Logs
+*.log
+/server.log
+/backend/server.log
+
+# Local files
+/app
+/.idea
 /.vscode
-/.vs
-/backend/__pycache__
-/backend/package-lock.json
+*.sqlite3
+*.db
+*.db-journal
+
+# Secrets
+*.pem
+.env
+.env*
+!/.env.example

@@ -1,0 +1,24 @@
+[Unit]
+Description=Gunicorn instance to serve Koncept Kresliri backend
+After=network.target
+
+[Service]
+# Uživatel a skupina, pod kterými služba poběží.
+# Je důležité vytvořit tohoto uživatele a nastavit mu vlastnictví adresáře s aplikací.
+# Příklad: sudo useradd -r kreslir
+#         sudo chown -R kreslir:kreslir /srv/kreslir
+User=kreslir
+Group=kreslir
+
+# Adresář, kde je umístěn backend
+WorkingDirectory=/srv/kreslir/backend
+
+# Cesta k Gunicornu, který je nainstalován ve virtuálním prostředí
+# Tím zajistíme, že se použijí správné závislosti.
+ExecStart=/srv/kreslir/backend/venv/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:8000
+
+# Automatický restart v případě chyby
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Lobby from './components/Lobby';
 import Game from './components/Game';
 import Leaderboards from './components/Leaderboards';
+import { config } from './config';
 import './App.css';
 
 function App() {
@@ -32,12 +33,7 @@ function App() {
       setIsConnecting(true);
       setConnectionError(null);
       
-      // Use environment variable for backend URL or fallback to current host so Vite proxy can forward /ws in dev
-      const fallbackScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      const fallbackHost = window.location.host; // includes port
-      const env: any = import.meta;
-      const backendWsUrl =
-        (env.env && env.env.VITE_BACKEND_WS) || `${fallbackScheme}://${fallbackHost}/ws/${gameCode}/${username}`;
+      const backendWsUrl = config.websocket.getGameUrl(gameCode, username);
 
       let ws: WebSocket;
       try {

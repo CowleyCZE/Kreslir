@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { config } from '../config';
 
 interface AggEntry {
   player: string;
@@ -46,14 +47,11 @@ const Leaderboards: React.FC = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const env: any = (import.meta as any);
-        const backendBase = (env.env && env.env.VITE_BACKEND_URL)
-          ? env.env.VITE_BACKEND_URL.replace(/\/+$/, '')
-          : `${window.location.protocol}//${window.location.hostname}:8000`;
+        const backendBase = config.api.baseUrl;
 
         const [aggRes, rankRes] = await Promise.all([
-          fetch(`${backendBase}/leaderboard/aggregate?limit=20`),
-          fetch(`${backendBase}/leaderboard/ranking?limit=20`),
+          fetch(`${backendBase}${config.api.endpoints.leaderboardAggregate}?limit=20`),
+          fetch(`${backendBase}${config.api.endpoints.leaderboardRanking}?limit=20`),
         ]);
         if (aggRes.ok) setAgg(await aggRes.json());
         if (rankRes.ok) setRank(await rankRes.json());
@@ -70,12 +68,9 @@ const Leaderboards: React.FC = () => {
     const fetchRecent = async () => {
       setLoadingRecent(true);
       try {
-        const env: any = (import.meta as any);
-        const backendBase = (env.env && env.env.VITE_BACKEND_URL)
-          ? env.env.VITE_BACKEND_URL.replace(/\/+$/, '')
-          : `${window.location.protocol}//${window.location.hostname}:8000`;
+        const backendBase = config.api.baseUrl;
 
-        const res = await fetch(`${backendBase}/games?limit=5`);
+        const res = await fetch(`${backendBase}${config.api.endpoints.games}?limit=5`);
         if (res.ok) {
           const data = await res.json();
           // backend returns 'timestamp' field; normalize to played_at for UI
@@ -94,12 +89,9 @@ const Leaderboards: React.FC = () => {
     setShowAll(true);
     setPage(1);
     try {
-      const env: any = (import.meta as any);
-      const backendBase = (env.env && env.env.VITE_BACKEND_URL)
-        ? env.env.VITE_BACKEND_URL.replace(/\/+$/, '')
-        : `${window.location.protocol}//${window.location.hostname}:8000`;
+      const backendBase = config.api.baseUrl;
 
-      const res = await fetch(`${backendBase}/games?limit=1000`);
+      const res = await fetch(`${backendBase}${config.api.endpoints.games}?limit=1000`);
       if (res.ok) {
         const data = await res.json();
         setAllResults(data.map((g: any) => ({ ...g, played_at: g.timestamp })));
@@ -121,14 +113,14 @@ const Leaderboards: React.FC = () => {
 
   return (
     <div className="p-4 bg-gray-800 text-white rounded-lg">
-      <h2 className="text-xl font-bold mb-2">Agregovaný žebøíèek (celkové skóre)</h2>
+      <h2 className="text-xl font-bold mb-2">Agregovanï¿½ ï¿½ebï¿½ï¿½ï¿½ek (celkovï¿½ skï¿½re)</h2>
       {loading ? (
-        <div>Naèítání...</div>
+        <div>Naï¿½ï¿½tï¿½nï¿½...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             {agg.length === 0 ? (
-              <div className="text-gray-400">Žádná data</div>
+              <div className="text-gray-400">ï¿½ï¿½dnï¿½ data</div>
             ) : (
               <ol className="list-decimal list-inside space-y-2">
                 {agg.map((entry) => (
@@ -136,7 +128,7 @@ const Leaderboards: React.FC = () => {
                     <div className="flex justify-between">
                       <div>
                         <div className="font-semibold">{entry.player}</div>
-                        <div className="text-sm text-gray-300">Hry: {entry.games_played} · Vítìzství: {entry.wins}</div>
+                        <div className="text-sm text-gray-300">Hry: {entry.games_played} ï¿½ Vï¿½tï¿½zstvï¿½: {entry.wins}</div>
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold">{entry.total_score}</div>
@@ -152,7 +144,7 @@ const Leaderboards: React.FC = () => {
           <div>
             <h3 className="font-bold mb-2">Ranking (wins / avg)</h3>
             {rank.length === 0 ? (
-              <div className="text-gray-400">Žádná data</div>
+              <div className="text-gray-400">ï¿½ï¿½dnï¿½ data</div>
             ) : (
               <ol className="list-decimal list-inside space-y-2">
                 {rank.map((r) => (
@@ -163,7 +155,7 @@ const Leaderboards: React.FC = () => {
                         <div className="text-sm text-gray-300">Hry: {r.games_played}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold">W:{r.wins} · {r.total_score}</div>
+                        <div className="text-lg font-bold">W:{r.wins} ï¿½ {r.total_score}</div>
                         <div className="text-xs text-gray-300">avg {r.average_score}</div>
                       </div>
                     </div>
@@ -176,17 +168,17 @@ const Leaderboards: React.FC = () => {
       )}
 
       <div className="mt-4">
-        <h3 className="font-semibold mb-2">Poslední hry</h3>
+        <h3 className="font-semibold mb-2">Poslednï¿½ hry</h3>
         {loadingRecent ? (
-          <div className="text-gray-300">Naèítání posledních her...</div>
+          <div className="text-gray-300">Naï¿½ï¿½tï¿½nï¿½ poslednï¿½ch her...</div>
         ) : recent.length === 0 ? (
-          <div className="text-gray-400">Žádné nedávné hry</div>
+          <div className="text-gray-400">ï¿½ï¿½dnï¿½ nedï¿½vnï¿½ hry</div>
         ) : (
           <ul className="space-y-2">
             {recent.map((g) => (
               <li key={g.id} className="p-2 bg-gray-700 rounded flex justify-between items-center">
                 <div className="cursor-pointer" onClick={() => openDetail(g)}>
-                  <div className="font-semibold">{g.winner ?? '—'}</div>
+                  <div className="font-semibold">{g.winner ?? 'ï¿½'}</div>
                   <div className="text-sm text-gray-300">{g.played_at ? new Date(g.played_at).toLocaleString() : ''}</div>
                 </div>
                 <div className="text-sm text-gray-200">{g.game_code ?? ''}</div>
@@ -200,7 +192,7 @@ const Leaderboards: React.FC = () => {
             onClick={openAllResults}
             className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 font-semibold"
           >
-            Zobrazit všechny výsledky
+            Zobrazit vï¿½echny vï¿½sledky
           </button>
         </div>
       </div>
@@ -209,20 +201,20 @@ const Leaderboards: React.FC = () => {
         <div className="fixed inset-0 bg-black/60 z-50 flex items-start justify-center p-6">
           <div className="bg-gray-800 rounded-2xl shadow-xl p-6 w-full max-w-4xl text-white">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold">Všechny výsledky</h2>
+              <h2 className="text-2xl font-bold">Vï¿½echny vï¿½sledky</h2>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowAll(false)}
                   className="text-gray-300 hover:text-white"
                 >
-                  Zavøít
+                  Zavï¿½ï¿½t
                 </button>
               </div>
             </div>
 
             <div className="max-h-[60vh] overflow-y-auto space-y-3">
               {allResults.length === 0 ? (
-                <div className="text-gray-400">Žádné výsledky k zobrazení</div>
+                <div className="text-gray-400">ï¿½ï¿½dnï¿½ vï¿½sledky k zobrazenï¿½</div>
               ) : (
                 <ol className="space-y-2">
                   {currentPageResults.map((g) => (
@@ -232,12 +224,12 @@ const Leaderboards: React.FC = () => {
                         <div className="font-semibold cursor-pointer hover:underline" onClick={() => openDetail(g)}>{g.game_code ?? g.id}</div>
                       </div>
                       <div>
-                        <div className="text-sm text-gray-300">Vítìz</div>
-                        <div className="font-semibold">{g.winner ?? '—'}</div>
+                        <div className="text-sm text-gray-300">Vï¿½tï¿½z</div>
+                        <div className="font-semibold">{g.winner ?? 'ï¿½'}</div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-gray-300">Èas</div>
-                        <div className="font-semibold">{g.played_at ? new Date(g.played_at).toLocaleString() : '—'}</div>
+                        <div className="text-sm text-gray-300">ï¿½as</div>
+                        <div className="font-semibold">{g.played_at ? new Date(g.played_at).toLocaleString() : 'ï¿½'}</div>
                       </div>
                     </li>
                   ))}
@@ -248,10 +240,10 @@ const Leaderboards: React.FC = () => {
             <div className="mt-4 flex items-center justify-between">
               <div className="text-sm text-gray-300">Strana {page} / {totalPages}</div>
               <div className="flex gap-2">
-                <button onClick={() => setPage(1)} disabled={page === 1} className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50">První</button>
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50">Pøedchozí</button>
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50">Další</button>
-                <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50">Poslední</button>
+                <button onClick={() => setPage(1)} disabled={page === 1} className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50">Prvnï¿½</button>
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50">Pï¿½edchozï¿½</button>
+                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50">Dalï¿½ï¿½</button>
+                <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-3 py-1 bg-gray-700 rounded disabled:opacity-50">Poslednï¿½</button>
               </div>
             </div>
           </div>
@@ -264,16 +256,16 @@ const Leaderboards: React.FC = () => {
             <div className="flex justify-between items-start gap-4">
               <div>
                 <h3 className="text-xl font-bold">Hra: {selectedGame.game_code ?? selectedGame.id}</h3>
-                <div className="text-sm text-gray-300">Èas: {selectedGame.played_at ? new Date(selectedGame.played_at).toLocaleString() : '—'}</div>
+                <div className="text-sm text-gray-300">ï¿½as: {selectedGame.played_at ? new Date(selectedGame.played_at).toLocaleString() : 'ï¿½'}</div>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <div className="text-sm text-gray-300">Vítìz</div>
-                <div className="font-semibold">{selectedGame.winner ?? '—'}</div>
+                <div className="text-sm text-gray-300">Vï¿½tï¿½z</div>
+                <div className="font-semibold">{selectedGame.winner ?? 'ï¿½'}</div>
               </div>
             </div>
 
             <div className="mt-4">
-              <h4 className="font-semibold mb-2">Skóre hráèù</h4>
+              <h4 className="font-semibold mb-2">Skï¿½re hrï¿½ï¿½ï¿½</h4>
               {selectedGame.scores && Object.keys(selectedGame.scores).length > 0 ? (
                 <ul className="space-y-2 max-h-60 overflow-y-auto">
                   {Object.entries(selectedGame.scores).sort((a: any, b: any) => (b[1] as number) - (a[1] as number)).map(([player, sc]) => (
@@ -284,13 +276,13 @@ const Leaderboards: React.FC = () => {
                   ))}
                 </ul>
               ) : (
-                <div className="text-gray-400">Žádné uložené skóre pro tuto hru</div>
+                <div className="text-gray-400">ï¿½ï¿½dnï¿½ uloï¿½enï¿½ skï¿½re pro tuto hru</div>
               )}
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => setSelectedGame(null)} className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">Zavøít</button>
-              <button onClick={() => { setShowAll(true); setSelectedGame(null); }} className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Zobrazit v pøehledu</button>
+              <button onClick={() => setSelectedGame(null)} className="px-4 py-2 bg-gray-700 rounded hover:bg-gray-600">Zavï¿½ï¿½t</button>
+              <button onClick={() => { setShowAll(true); setSelectedGame(null); }} className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700">Zobrazit v pï¿½ehledu</button>
             </div>
           </div>
         </div>

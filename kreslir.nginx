@@ -1,0 +1,49 @@
+# Konfigurace pro Nginx server
+# Soubor uložte na VPS jako /etc/nginx/sites-available/moje-hra.cz
+
+server {
+    # Naslouchat na portu 80 pro HTTP (Certbot to později upraví pro HTTPS)
+    listen 80;
+    listen [::]:80;
+
+    # Doména, na které hra poběží
+    server_name moje-hra.cz;
+
+    # Kořenový adresář, kde jsou statické soubory frontendu po 'npm run build'
+    root /srv/kreslir/frontend/dist;
+
+    # Hlavní soubor, který se má zobrazit
+    index index.html;
+
+    # Blok pro obsluhu frontendu
+    # Všechny požadavky, které neodpovídají /api nebo /ws, budou obslouženy zde.
+    # try_files se pokusí najít soubor v root adresáři. Pokud nenajde,
+    # vrátí index.html. To je klíčové pro fungování React Routeru.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Blok pro přesměrování API požadavků na backend
+    location /api/ {
+        # Adresa, na které běží Gunicorn/FastAPI backend
+        proxy_pass http://127.0.0.1:8000;
+        
+        # Hlavičky potřebné pro správné předání informací backendu
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Blok pro přesměrování WebSocket spojení
+    location /ws/ {
+        proxy_pass http://127.0.0.1:8000/ws/; # Důležité lomítko na konci!
+        
+        # Hlavičky nezbytné pro upgrade spojení na WebSocket
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}

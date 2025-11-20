@@ -13,13 +13,9 @@ from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
 
-app = FastAPI(
-    title="Kreslir Backend",
-    description="Backend pro kreslicí hru",
-    version="1.0.0"
-)
-apirouter = APIRouter(prefix="/api")
-wsrouter = APIRouter(prefix="/ws")
+app = FastAPI()
+api_router = APIRouter(prefix="/api")
+ws_router = APIRouter(prefix="/ws")
 
 app.add_middleware(
     CORSMiddleware,
@@ -303,6 +299,7 @@ def init_db():
     """)
     _conn.commit()
 
+init_db()
 
 def _save_game_result_sync(game_code: str, scores: dict) -> None:
     # Determine winner
@@ -322,7 +319,7 @@ async def save_game_result(game_code: str, scores: dict):
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, _save_game_result_sync, game_code, scores)
 
-@apirouter.get('/leaderboard/top')
+@api_router.get('/leaderboard/top')
 async def get_top_leaderboard(limit: int = 10):
     cur = _conn.cursor()
     cur.execute("SELECT game_code, timestamp, winner, winner_score FROM games WHERE winner IS NOT NULL ORDER BY winner_score DESC LIMIT ?", (limit,))
@@ -337,7 +334,7 @@ async def get_top_leaderboard(limit: int = 10):
         })
     return JSONResponse(result)
 
-@apirouter.get('/games')
+@api_router.get('/games')
 async def get_games(limit: int = 50):
     cur = _conn.cursor()
     cur.execute("SELECT id, game_code, timestamp, winner, winner_score, scores_json FROM games ORDER BY id DESC LIMIT ?", (limit,))
@@ -359,7 +356,7 @@ async def get_games(limit: int = 50):
     return JSONResponse(result)
 
 
-@apirouter.get('/leaderboard/aggregate')
+@api_router.get('/leaderboard/aggregate')
 async def get_aggregated_leaderboard(limit: int = 50):
     """Return aggregated leaderboard across all games: total score, games played, wins, highest score, average score."""
     cur = _conn.cursor()
@@ -408,7 +405,7 @@ async def get_aggregated_leaderboard(limit: int = 50):
     return JSONResponse(out[:limit])
 
 
-@apirouter.get('/leaderboard/player/{username}')
+@api_router.get('/leaderboard/player/{username}')
 async def get_player_stats(username: str, recent_limit: int = 10):
     """Return aggregated stats for a specific player and recent game history entries where they participated."""
     cur = _conn.cursor()
@@ -471,7 +468,7 @@ def get_words_for_round(package_name: str):
         "Činnost": random.sample(package["Činnost"], min(3, len(package["Činnost"]))),
     }
 
-@wsrouter.websocket("/{game_code}/{username}")
+@ws_router.websocket("/{game_code}/{username}")
 async def websocket_endpoint(websocket: WebSocket, game_code: str, username: str):
     await manager.connect(websocket, game_code, username)
     try:
@@ -734,10 +731,10 @@ async def end_game(game_code: str):
         except Exception:
             pass
 
-@apirouter.get("/")
+@api_router.get("/")
 async def get_root():
     return {"message": "Vítejte v backendu Koncept Kreslíři!"}
-@apirouter.get('/leaderboard/ranking')
+@api_router.get('/leaderboard/ranking')
 async def get_leaderboard_ranking(limit: int = 50):
     """Return leaderboard ranked primarily by wins, then average score, then total score."""
     cur = _conn.cursor()
@@ -783,10 +780,5 @@ async def get_leaderboard_ranking(limit: int = 50):
     out.sort(key=lambda x: (x["wins"], x["average_score"], x["total_score"]), reverse=True)
     return JSONResponse(out[:limit])
 
-app.include_router(apirouter)
-app.include_router(wsrouter)
-
-if __name__ == "__main__":
-    init_db()
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+app.include_router(api_router)
+app.include_router(ws_router)

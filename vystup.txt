@@ -1,0 +1,54 @@
+Zde je výstup příkazu "journalctl -u kreslir -n 50 --no-pager"
+
+ubuntu@ip-172-31-41-117:~$ journalctl -u kreslir -n 50 --no-pager
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/usr/lib/python3.10/logging/__init__.py", line 1021, in handleError
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     sys.stderr.write('--- Logging error ---\n')
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]: RuntimeError: reentrant call inside <_io.BufferedWriter name='<stderr>'>
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]: Call stack:
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/srv/kreslir/backend/venv/bin/gunicorn", line 7, in <module>
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     sys.exit(run())
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/srv/kreslir/backend/venv/lib/python3.10/site-packages/gunicorn/app/wsgiapp.py", line 66, in run
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     WSGIApplication("%(prog)s [OPTIONS] [APP_MODULE]", prog=prog).run()
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/srv/kreslir/backend/venv/lib/python3.10/site-packages/gunicorn/app/base.py", line 235, in run
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     super().run()
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/srv/kreslir/backend/venv/lib/python3.10/site-packages/gunicorn/app/base.py", line 71, in run
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     Arbiter(self).run()
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/srv/kreslir/backend/venv/lib/python3.10/site-packages/gunicorn/arbiter.py", line 226, in run
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     self.halt()
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/srv/kreslir/backend/venv/lib/python3.10/site-packages/gunicorn/arbiter.py", line 341, in halt
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     self.stop()
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/srv/kreslir/backend/venv/lib/python3.10/site-packages/gunicorn/arbiter.py", line 395, in stop
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     time.sleep(0.1)
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/srv/kreslir/backend/venv/lib/python3.10/site-packages/gunicorn/arbiter.py", line 241, in handle_chld
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     self.reap_workers()
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/srv/kreslir/backend/venv/lib/python3.10/site-packages/gunicorn/arbiter.py", line 553, in reap_workers
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     self.log.error(msg)
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:   File "/srv/kreslir/backend/venv/lib/python3.10/site-packages/gunicorn/glogging.py", line 271, in error
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]:     self.error_log.error(msg, *args, **kwargs)
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]: Message: 'Worker (pid:38170) was sent SIGTERM!'
+Nov 19 19:47:49 ip-172-31-41-117 gunicorn[38167]: Arguments: ()
+Nov 19 19:48:19 ip-172-31-41-117 gunicorn[38167]: [2025-11-19 19:48:19 +0000] [38167] [INFO] Shutting down: Master
+Nov 19 19:48:19 ip-172-31-41-117 systemd[1]: kreslir.service: Deactivated successfully.
+Nov 19 19:48:19 ip-172-31-41-117 systemd[1]: Stopped Gunicorn instance to serve Koncept Kresliri backend.
+Nov 19 19:48:19 ip-172-31-41-117 systemd[1]: kreslir.service: Consumed 3.157s CPU time.
+Nov 19 20:09:14 ip-172-31-41-117 systemd[1]: Started Gunicorn instance to serve Koncept Kresliri backend.
+Nov 19 20:09:14 ip-172-31-41-117 gunicorn[38235]: [2025-11-19 20:09:14 +0000] [38235] [INFO] Starting gunicorn 23.0.0
+Nov 19 20:09:14 ip-172-31-41-117 gunicorn[38235]: [2025-11-19 20:09:14 +0000] [38235] [INFO] Listening at: http://0.0.0.0:8000 (38235)
+Nov 19 20:09:14 ip-172-31-41-117 gunicorn[38235]: [2025-11-19 20:09:14 +0000] [38235] [INFO] Using worker: uvicorn.workers.UvicornWorker
+Nov 19 20:09:14 ip-172-31-41-117 gunicorn[38236]: [2025-11-19 20:09:14 +0000] [38236] [INFO] Booting worker with pid: 38236
+Nov 19 20:09:14 ip-172-31-41-117 gunicorn[38237]: [2025-11-19 20:09:14 +0000] [38237] [INFO] Booting worker with pid: 38237
+Nov 19 20:09:14 ip-172-31-41-117 gunicorn[38238]: [2025-11-19 20:09:14 +0000] [38238] [INFO] Booting worker with pid: 38238
+Nov 19 20:09:14 ip-172-31-41-117 gunicorn[38239]: [2025-11-19 20:09:14 +0000] [38239] [INFO] Booting worker with pid: 38239
+Nov 19 20:09:15 ip-172-31-41-117 gunicorn[38236]: [2025-11-19 20:09:15 +0000] [38236] [INFO] Started server process [38236]
+Nov 19 20:09:15 ip-172-31-41-117 gunicorn[38236]: [2025-11-19 20:09:15 +0000] [38236] [INFO] Waiting for application startup.
+Nov 19 20:09:15 ip-172-31-41-117 gunicorn[38236]: [2025-11-19 20:09:15 +0000] [38236] [INFO] Application startup complete.
+Nov 19 20:09:15 ip-172-31-41-117 gunicorn[38237]: [2025-11-19 20:09:15 +0000] [38237] [INFO] Started server process [38237]
+Nov 19 20:09:15 ip-172-31-41-117 gunicorn[38237]: [2025-11-19 20:09:15 +0000] [38237] [INFO] Waiting for application startup.
+Nov 19 20:09:15 ip-172-31-41-117 gunicorn[38237]: [2025-11-19 20:09:15 +0000] [38237] [INFO] Application startup complete.
+Nov 19 20:09:16 ip-172-31-41-117 gunicorn[38238]: [2025-11-19 20:09:16 +0000] [38238] [INFO] Started server process [38238]
+Nov 19 20:09:16 ip-172-31-41-117 gunicorn[38238]: [2025-11-19 20:09:16 +0000] [38238] [INFO] Waiting for application startup.
+Nov 19 20:09:16 ip-172-31-41-117 gunicorn[38238]: [2025-11-19 20:09:16 +0000] [38238] [INFO] Application startup complete.
+Nov 19 20:09:16 ip-172-31-41-117 gunicorn[38239]: [2025-11-19 20:09:16 +0000] [38239] [INFO] Started server process [38239]
+Nov 19 20:09:16 ip-172-31-41-117 gunicorn[38239]: [2025-11-19 20:09:16 +0000] [38239] [INFO] Waiting for application startup.
+Nov 19 20:09:16 ip-172-31-41-117 gunicorn[38239]: [2025-11-19 20:09:16 +0000] [38239] [INFO] Application startup complete.
+ubuntu@ip-172-31-41-117:~$
